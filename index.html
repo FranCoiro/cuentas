@@ -176,6 +176,43 @@ input{outline:none}
 .name-inp:focus{border-bottom-color:var(--purple)}
 .bud-inp{width:90px;background:#FBF5FF;border:2px solid var(--border);border-radius:7px;padding:.3rem .5rem;font-size:.8rem;font-weight:700;color:var(--text);min-height:36px}
 .bud-inp:focus{border-color:var(--purple)}
+.emoji-picker{position:absolute;z-index:200;background:#FFF;border:2px solid var(--border);border-radius:14px;padding:.6rem;box-shadow:0 8px 24px rgba(180,127,222,.2);display:grid;grid-template-columns:repeat(8,1fr);gap:2px;width:260px;max-height:200px;overflow-y:auto}
+.emoji-picker button{font-size:1.2rem;padding:.3rem;border-radius:7px;border:none;background:none;cursor:pointer;line-height:1}
+.emoji-picker button:hover{background:var(--purple-light)}
+.fixed-card{background:#FFF;border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem;border-left:4px solid var(--border);box-shadow:0 2px 8px rgba(180,127,222,.07);margin-bottom:.45rem;position:relative;transition:all .2s}
+.fixed-card.paid{background:#F0FFF4;border-left-color:#77DD77}
+.fixed-card.paid .fc-name{text-decoration:line-through;color:var(--muted)}
+.fc-info{flex:1;min-width:0}
+.fc-name{font-size:.88rem;font-weight:700;color:var(--text)}
+.fc-amt{font-family:'Lora',serif;font-size:1rem;font-weight:700;color:var(--text);white-space:nowrap}
+.fc-meta{font-size:.68rem;color:var(--muted);margin-top:1px}
+.pay-btn{padding:.4rem .8rem;border-radius:20px;border:2px solid;font-size:.75rem;font-weight:800;min-height:36px;transition:all .2s}
+.pay-btn.unpaid{border-color:var(--border);color:var(--muted);background:#FFF}
+.pay-btn.unpaid:hover{border-color:#FF6B6B;color:#FF6B6B}
+.pay-btn.paid{border-color:#77DD77;color:var(--green-dark);background:#F0FFF4}
+.paid-stamp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s}
+.paid-stamp.show{opacity:1}
+.paid-stamp span{font-size:3rem;transform:rotate(-15deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,.1))}
+.week-card{background:#FFF;border-radius:12px;padding:.8rem 1rem;margin-bottom:.5rem;border:2px solid var(--border)}
+.week-card.current{border-color:var(--purple);background:var(--purple-light)}
+.week-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
+.week-title{font-size:.82rem;font-weight:800;color:var(--text)}
+.week-badge{font-size:.7rem;font-weight:800;padding:.15rem .5rem;border-radius:10px}
+.week-surplus{background:#E8F8EE;color:var(--green-dark)}
+.week-deficit{background:#FFEAEA;color:var(--red-dark)}
+.week-neutral{background:#F5EEFF;color:var(--purple)}
+.week-bar-wrap{height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden;margin:.4rem 0}
+.week-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+.week-detail{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);font-weight:600}
+.subitem-list{margin:.4rem 0 .4rem 1.2rem;display:flex;flex-direction:column;gap:.35rem}
+.subitem-row{display:flex;align-items:center;gap:.5rem;background:#FAF5FF;border:1.5px solid var(--border);border-radius:8px;padding:.4rem .7rem}
+.subitem-name{flex:1;background:none;border:none;border-bottom:1.5px solid var(--border);font-size:.82rem;font-weight:600;color:var(--text);padding:.1rem .1rem;min-height:30px}
+.subitem-name:focus{outline:none;border-bottom-color:var(--purple)}
+.subitem-amt{width:80px;background:#FFF;border:1.5px solid var(--border);border-radius:6px;padding:.25rem .4rem;font-size:.78rem;font-weight:700;color:var(--text);min-height:30px}
+.subitem-amt:focus{outline:none;border-color:var(--purple)}
+.subitem-del{color:#D0C0E0;font-size:.85rem;font-weight:700;min-width:24px;min-height:30px;display:flex;align-items:center;justify-content:center}
+.subitem-del:hover{color:var(--red-dark)}
+.add-subitem-btn{font-size:.72rem;font-weight:700;color:var(--purple);background:var(--purple-light);border:none;border-radius:7px;padding:.3rem .7rem;margin-top:.3rem;margin-left:1.2rem;min-height:30px}
 .sb-input{width:100%;background:#FFF;border:2px solid var(--border);border-radius:10px;padding:.7rem .85rem;color:var(--text);font-size:.82rem;font-weight:600;margin-bottom:.6rem;min-height:44px}
 .sb-input:focus{border-color:var(--purple)}
 .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:.4rem}
@@ -197,6 +234,7 @@ code{background:#F0E6FF;padding:.1rem .4rem;border-radius:4px;font-size:.78rem;c
     <button class="ni active" data-view="home"><span class="ico">🏠</span><span class="lbl">Inicio</span></button>
     <button class="ni" data-view="income"><span class="ico">💰</span><span class="lbl">Ingresos</span></button>
     <button class="ni" data-view="expenses"><span class="ico">🛍️</span><span class="lbl">Gastos</span></button>
+    <button class="ni" data-view="fixed"><span class="ico">📌</span><span class="lbl">Fijos</span></button>
     <button class="ni" data-view="projected"><span class="ico">🔮</span><span class="lbl">Proyectados</span></button>
     <button class="ni" data-view="settings"><span class="ico">⚙️</span><span class="lbl">Ajustes</span></button>
   </nav>
@@ -238,8 +276,8 @@ function SESSION_ID() {
   return 'francoiro_finanzas';
 }
 
-let SB_URL = 'https://kyikjnvzpaigtmrsjkuy.supabase.co';
-let SB_KEY = 'sb_publishable_qG2AfGGaMqsENVqOy-gNHw__TuBK_da';
+let SB_URL = localStorage.getItem('mf_sb_url') || 'https://kyikjnvzpaigtmrsjkuy.supabase.co';
+let SB_KEY = localStorage.getItem('mf_sb_key') || 'sb_publishable_qG2AfGGaMqsENVqOy-gNHw__TuBK_da';
 let SB_STATUS = 'none'; // 'none' | 'ok' | 'error'
 
 // ═══════════════════════════════════════════════
@@ -379,7 +417,7 @@ function go(view) {
 function render() {
   const c = document.getElementById('content');
   c.innerHTML = '';
-  ({home:rHome, income:rIncome, expenses:rExpenses, projected:rProjected, settings:rSettings})[S.view]?.(c);
+  ({home:rHome, income:rIncome, expenses:rExpenses, fixed:rFixed, projected:rProjected, settings:rSettings})[S.view]?.(c);
 }
 
 // ═══════════════════════════════════════════════
@@ -410,7 +448,9 @@ function rHome(c) {
   }
 
   // Hero balance
-  const inc = totalIncome(), exp = totalExpenses(), bal = inc - exp;
+  const inc = totalIncome(), exp = totalExpenses();
+  const paidFixed = (S.data.fixed||[]).filter(f=>f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
+  const bal = inc - exp - paidFixed;
   const hero = div({cn:'hero'});
   hero.appendChild(div({cn:'hero-eye'},['balance del mes']));
   hero.appendChild(div({cn:'hero-bal ' + (bal >= 0 ? 'pos':'neg')},[(bal < 0 ? '–':'') + fmt(bal)]));
@@ -696,78 +736,217 @@ function rExpenses(c) {
 }
 
 // ═══════════════════════════════════════════════
-// PROJECTED VIEW
+// FIXED EXPENSES VIEW
 // ═══════════════════════════════════════════════
-function rProjected(c) {
+function rFixed(c) {
   const root = div({cn:'view'});
   c.appendChild(root);
-
-  const hdr = div({style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'.5rem'}});
-  hdr.appendChild(h2e({cn:'page-title',style:{margin:'0'}},['Proyectados']));
-  hdr.appendChild(btn({cn:'pill-btn',onClick:() => { S.projForm=!S.projForm; render(); }},[S.projForm?'✕ Cerrar':'+ Nuevo']));
-  root.appendChild(hdr);
-  root.appendChild(pe({cn:'sub',style:{marginBottom:'1rem'}},['Planificá gastos futuros y recibí alerta cuando llegue el mes.']));
+  root.appendChild(h2e({cn:'page-title'},['Gastos Fijos 📌']));
+  root.appendChild(pe({cn:'sub',style:{marginBottom:'1rem'}},['Pagos recurrentes mensuales. El total se descuenta automáticamente del balance.']));
 
   const cms = mk();
+  if (!S.data.fixed) S.data.fixed = [];
+  const paidKey = 'paid_' + cms;
 
-  if (S.projForm) {
-    const form = div({cn:'',style:{background:'#FFF',border:'2px solid var(--border)',borderRadius:'14px',padding:'1rem',marginBottom:'1rem'}});
-    const ni = inp({cn:'txt-inp',type:'text',placeholder:'Zapatillas, dentista, crema...',style:{marginBottom:'.7rem'}});
-    form.appendChild(ni);
-    const aw = div({cn:'amt-wrap',style:{marginBottom:'.7rem'}});
-    aw.appendChild(div({cn:'amt-sign'},['$']));
-    const ai = inp({cn:'amt-inp',type:'number',placeholder:'0'});
-    aw.appendChild(ai); form.appendChild(aw);
+  // Summary totals
+  const totalFixed = S.data.fixed.reduce((s,f) => s+f.amount, 0);
+  const paidAmt    = S.data.fixed.filter(f=>f[paidKey]).reduce((s,f) => s+f.amount, 0);
+  const pendAmt    = totalFixed - paidAmt;
 
-    let useN = true;
-    const seg = div({cn:'seg'});
-    const sn = btn({cn:'seg-btn on',onClick:() => { useN=true; sn.className='seg-btn on'; sm.className='seg-btn'; nrow.style.display='flex'; mrow.style.display='none'; }},['En N meses']);
-    const sm = btn({cn:'seg-btn',onClick:() => { useN=false; sm.className='seg-btn on'; sn.className='seg-btn'; mrow.style.display='block'; nrow.style.display='none'; }},['Mes exacto']);
-    seg.appendChild(sn); seg.appendChild(sm); form.appendChild(seg);
-
-    const nInp = inp({cn:'txt-inp',type:'number',min:'1',max:'36',value:'2',style:{width:'70px'}});
-    const nrow = div({style:{display:'flex',alignItems:'center',gap:'.6rem',marginBottom:'.7rem'}});
-    nrow.appendChild(nInp); nrow.appendChild(pe({cn:'sub'},['meses desde hoy']));
-    form.appendChild(nrow);
-
-    const mInp = inp({cn:'txt-inp',type:'month',value:cms,style:{display:'none',marginBottom:'.7rem'}});
-    const mrow = div({style:{display:'none'}});
-    mrow.appendChild(mInp); form.appendChild(mrow);
-
-    form.appendChild(btn({cn:'save-btn',onClick:() => {
-      const name=ni.value.trim(); const amt=Number(ai.value);
-      if(!name||!amt) return;
-      let target;
-      if(useN){const d=new Date();d.setMonth(d.getMonth()+Number(nInp.value));target=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
-      else target=mInp.value;
-      S.data.projected.push({id:Date.now(),name,amount:amt,targetMonth:target,done:false});
-      save(); S.projForm=false; render();
-    }},['Agregar']));
-    root.appendChild(form);
+  if (S.data.fixed.length) {
+    const sumRow = div({style:{display:'flex',gap:'.5rem',marginBottom:'1rem'}});
+    [[' Total mensual',totalFixed,'#F5EEFF','#8B5BAE'],
+     ['✓ Pagado',paidAmt,'#E8F8EE','#2A7050'],
+     ['⏳ Pendiente',pendAmt,'#FFF4E0','#D35400']
+    ].forEach(([lbl,val,bg,col]) => {
+      const card = div({style:{flex:'1',background:bg,borderRadius:'10px',padding:'.6rem .8rem',textAlign:'center'}});
+      const l = document.createElement('div');
+      l.style.cssText = 'font-size:.62rem;font-weight:800;color:'+col+';text-transform:uppercase;letter-spacing:.5px';
+      l.textContent = lbl;
+      const v = document.createElement('div');
+      v.style.cssText = "font-family:'Lora',serif;font-size:1rem;font-weight:700;color:"+col;
+      v.textContent = fmt(val);
+      card.appendChild(l); card.appendChild(v);
+      sumRow.appendChild(card);
+    });
+    root.appendChild(sumRow);
   }
 
-  const sorted = S.data.projected.slice().sort((a,b) => a.targetMonth.localeCompare(b.targetMonth));
-  if (!sorted.length) root.appendChild(pe({cn:'empty'},['Nada proyectado aún.']));
+  // Fixed items list
+  S.data.fixed.forEach((f, i) => {
+    const paid = !!f[paidKey];
+    const card = div({cn:'fixed-card'+(paid?' paid':'')});
 
-  sorted.forEach(p => {
-    const isNow=p.targetMonth===cms, isPast=p.targetMonth<cms;
-    let tagCn,tagTxt;
-    if(p.done){tagCn='done';tagTxt='✓ Ejecutado';}
-    else if(isNow){tagCn='now';tagTxt='⚠️ Este mes';}
-    else if(!isPast){tagCn='future';tagTxt='📅 '+p.targetMonth;}
-    else{tagCn='done';tagTxt='Pasado';}
-    const card=div({cn:'proj-card'+(p.done?' past':isNow?' now':'')});
-    card.appendChild(div({cn:'proj-top'},[
-      el('span',{style:{fontSize:'.9rem',fontWeight:'700',textDecoration:p.done?'line-through':'none'}},[p.name]),
-      el('span',{style:{fontFamily:"'Lora',serif",fontWeight:'700'}},[fmt(p.amount)])
-    ]));
-    card.appendChild(div({cn:'ptag '+tagCn},[tagTxt]));
-    card.appendChild(div({cn:'proj-btns'},[
-      btn({cn:'pb g',onClick:() => { S.data.projected=S.data.projected.map(x=>x.id===p.id?{...x,done:!x.done}:x); save();render(); }},[p.done?'↩ Deshacer':'✓ Hecho']),
-      btn({cn:'pb r',onClick:() => { S.data.projected=S.data.projected.filter(x=>x.id!==p.id); save();render(); }},['🗑 Eliminar'])
-    ]));
+    const info = div({cn:'fc-info'});
+    const nm = document.createElement('div'); nm.className='fc-name'; nm.textContent=f.icon+' '+f.name;
+    if (paid) nm.style.textDecoration='line-through';
+    info.appendChild(nm);
+    card.appendChild(info);
+
+    const amt = document.createElement('div'); amt.className='fc-amt'; amt.textContent=fmt(f.amount);
+    card.appendChild(amt);
+
+    const pb = document.createElement('button');
+    pb.className = 'pay-btn '+(paid?'paid':'unpaid');
+    pb.textContent = paid ? '✓ Pagado' : 'Marcar pagado';
+    pb.addEventListener('click', () => {
+      S.data.fixed[i][paidKey] = !S.data.fixed[i][paidKey];
+      save(); render();
+    });
+    card.appendChild(pb);
+
+    const dx = document.createElement('button');
+    dx.className='del-x'; dx.textContent='✕';
+    dx.addEventListener('click', () => { S.data.fixed.splice(i,1); save(); render(); });
+    card.appendChild(dx);
+
     root.appendChild(card);
   });
+
+  // Add form
+  const addToggle = document.createElement('button');
+  addToggle.className = 'ghost-btn';
+  addToggle.style.cssText = 'width:100%;margin-top:.7rem;margin-bottom:.5rem';
+  addToggle.textContent = '+ Agregar gasto fijo';
+
+  const form = document.createElement('div');
+  form.style.cssText = 'display:none;background:#FFF;border:2px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:1rem';
+
+  addToggle.addEventListener('click', () => {
+    const open = form.style.display !== 'none';
+    form.style.display = open ? 'none' : 'block';
+    addToggle.textContent = open ? '+ Agregar gasto fijo' : '✕ Cerrar';
+  });
+
+  const topRow = document.createElement('div');
+  topRow.style.cssText = 'display:flex;gap:.5rem;margin-bottom:.6rem';
+  const icoI = inp({cn:'txt-inp',type:'text',value:'💳',style:{width:'65px',textAlign:'center',fontSize:'1.1rem'}});
+  const nmI  = inp({cn:'txt-inp',type:'text',placeholder:'Nombre (ej: YouTube, Seguro)'});
+  topRow.appendChild(icoI); topRow.appendChild(nmI);
+  form.appendChild(topRow);
+
+  const aw = div({cn:'amt-wrap',style:{marginBottom:'.6rem'}});
+  aw.appendChild(div({cn:'amt-sign'},['$']));
+  const amtI = inp({cn:'amt-inp',type:'number',placeholder:'0'});
+  aw.appendChild(amtI);
+  form.appendChild(aw);
+
+  const saveF = document.createElement('button');
+  saveF.className='save-btn'; saveF.textContent='Agregar';
+  saveF.addEventListener('click', () => {
+    const name=nmI.value.trim(); const amt=Number(amtI.value);
+    if (!name||!amt) return;
+    if (!S.data.fixed) S.data.fixed=[];
+    S.data.fixed.push({id:Date.now(),icon:icoI.value.trim()||'💳',name,amount:amt});
+    save();
+    nmI.value=''; amtI.value=''; icoI.value='💳';
+    form.style.display='none'; addToggle.textContent='+ Agregar gasto fijo';
+    render();
+  });
+  form.appendChild(saveF);
+
+  root.appendChild(addToggle);
+  root.appendChild(form);
+
+  // Weekly carry-over
+  root.appendChild(h2e({cn:'sec-title',style:{marginTop:'1.5rem'}},['Semanas con arrastre 📅']));
+  root.appendChild(pe({cn:'sub',style:{marginBottom:'.8rem'}},['Tus categorías semanales. El excedente o déficit pasa a la siguiente semana.']));
+
+  const weeklyCats = S.data.cats.filter(c => c.freq==='semanal' && c.budget>0);
+  if (!weeklyCats.length) {
+    root.appendChild(pe({cn:'empty'},['No tenés categorías semanales con presupuesto. Configuralas en ⚙️ Ajustes.']));
+    return;
+  }
+
+  weeklyCats.forEach(cat => {
+    const catWrap = document.createElement('div');
+    catWrap.style.marginBottom = '1.3rem';
+
+    const catHdr = document.createElement('div');
+    catHdr.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
+    const ei = document.createElement('span'); ei.style.fontSize='1.2rem'; ei.textContent=cat.icon;
+    const ni = document.createElement('strong'); ni.style.fontSize='.95rem'; ni.textContent=cat.name;
+    const si = document.createElement('span'); si.className='sub';
+    si.textContent = ' · '+fmt(cat.budget)+'/sem · inicia el '+(cat.weekStart||'Lunes');
+    catHdr.appendChild(ei); catHdr.appendChild(ni); catHdr.appendChild(si);
+    catWrap.appendChild(catHdr);
+    catWrap.appendChild(buildWeekHistory(cat));
+    root.appendChild(catWrap);
+  });
+}
+
+function getWeekBounds(referenceDate, startDayName) {
+  const DAY_MAP = {Lunes:1,Martes:2,'Miércoles':3,Jueves:4,Viernes:5,Sábado:6,Domingo:0};
+  const startDay = DAY_MAP[startDayName] !== undefined ? DAY_MAP[startDayName] : 1;
+  const d = new Date(referenceDate);
+  const dow = d.getDay();
+  let diff = (dow - startDay + 7) % 7;
+  const mon = new Date(d); mon.setDate(d.getDate()-diff); mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+  return {mon, sun};
+}
+
+function buildWeekHistory(cat) {
+  const wrap = document.createElement('div');
+  const now = new Date();
+  const startDay = cat.weekStart || 'Lunes';
+  const weeks = [];
+  for (let w=4; w>=0; w--) {
+    const ref = new Date(now); ref.setDate(now.getDate()-w*7);
+    const {mon, sun} = getWeekBounds(ref, startDay);
+    const mds = mon.toISOString().split('T')[0];
+    const sds = sun.toISOString().split('T')[0];
+    const mk2 = mon.getFullYear()+'-'+String(mon.getMonth()+1).padStart(2,'0');
+    const monthData = S.data.months[mk2]||{income:[],expenses:[]};
+    const spent = (monthData.expenses||[]).filter(e=>e.category===cat.id&&e.date>=mds&&e.date<=sds).reduce((s,e)=>s+e.amount,0);
+    const today = now.toISOString().split('T')[0];
+    weeks.push({mds,sds,spent,isCurrent:today>=mds&&today<=sds});
+  }
+
+  let carry=0;
+  weeks.forEach(w => {
+    w.carryIn = carry;
+    w.effective = cat.budget + carry;
+    w.remaining = w.effective - w.spent;
+    carry = w.remaining;
+  });
+
+  weeks.forEach(w => {
+    const pct = Math.min(100,(w.spent/Math.max(w.effective,1))*100);
+    const over = w.remaining<0;
+
+    const card = document.createElement('div');
+    card.className = 'week-card'+(w.isCurrent?' current':'');
+
+    const hdr = document.createElement('div'); hdr.className='week-hdr';
+    const tl = document.createElement('div'); tl.className='week-title';
+    tl.textContent = w.isCurrent ? 'Esta semana ('+w.mds.slice(5)+' → '+w.sds.slice(5)+')' : w.mds.slice(5)+' → '+w.sds.slice(5);
+    const badge = document.createElement('div');
+    badge.className = 'week-badge '+(over?'week-deficit':w.remaining>0?'week-surplus':'week-neutral');
+    badge.textContent = (over?'–':'+')+fmt(Math.abs(w.remaining));
+    hdr.appendChild(tl); hdr.appendChild(badge);
+    card.appendChild(hdr);
+
+    if (w.carryIn !== 0) {
+      const ci = document.createElement('div'); ci.className='sub'; ci.style.cssText='margin-bottom:.3rem;font-size:.68rem';
+      ci.textContent = 'Arrastre: '+(w.carryIn>0?'+':'')+fmt(w.carryIn);
+      card.appendChild(ci);
+    }
+
+    const track = document.createElement('div'); track.className='week-bar-wrap';
+    const fill  = document.createElement('div'); fill.className='week-bar-fill';
+    fill.style.cssText = 'width:'+pct+'%;background:'+(over?'#FF6B6B':cat.color);
+    track.appendChild(fill); card.appendChild(track);
+
+    const det = document.createElement('div'); det.className='week-detail';
+    const d1=document.createElement('span'); d1.textContent='Gastado: '+fmt(w.spent);
+    const d2=document.createElement('span'); d2.textContent='Presupuesto: '+fmt(w.effective);
+    det.appendChild(d1); det.appendChild(d2);
+    card.appendChild(det);
+
+    wrap.appendChild(card);
+  });
+  return wrap;
 }
 
 // ═══════════════════════════════════════════════
@@ -784,123 +963,332 @@ function rSettings(c) {
 
   const dotColor = SB_STATUS==='ok'?'status-ok':SB_STATUS==='error'?'status-err':'status-none';
   const dotLbl = SB_STATUS==='ok'?'Conectado':SB_STATUS==='error'?'Error de conexión':'No configurado';
-  sbSec.appendChild(div({style:{fontSize:'.78rem',fontWeight:'700',marginBottom:'.8rem',color:'var(--muted)'}},
-    [el('span',{cn:'status-dot '+dotColor}), dotLbl]));
+  const statusEl = document.createElement('div');
+  statusEl.style.cssText = 'font-size:.78rem;font-weight:700;margin-bottom:.8rem;color:var(--muted)';
+  const dot = document.createElement('span'); dot.className='status-dot '+dotColor;
+  statusEl.appendChild(dot); statusEl.appendChild(document.createTextNode(dotLbl));
+  sbSec.appendChild(statusEl);
 
   const urlInp = inp({cn:'sb-input',type:'url',placeholder:'https://xxxx.supabase.co',value:SB_URL});
   const keyInp = inp({cn:'sb-input',type:'password',placeholder:'anon public key',value:SB_KEY});
-  sbSec.appendChild(div({cn:'sub',style:{marginBottom:'.5rem'}},['Pegá tu URL y clave anon de Supabase:']));
+  sbSec.appendChild(pe({cn:'sub',style:{marginBottom:'.5rem'}},['Pegá tu URL y clave anon de Supabase:']));
   sbSec.appendChild(urlInp);
   sbSec.appendChild(keyInp);
 
-  const saveDbBtn = btn({cn:'save-btn sb',style:{marginBottom:'.7rem'},onClick:async () => {
-    SB_URL = urlInp.value.trim();
-    SB_KEY = keyInp.value.trim();
-    localStorage.setItem('mf_sb_url', SB_URL);
-    localStorage.setItem('mf_sb_key', SB_KEY);
-    saveDbBtn.textContent = '⏳ Probando...';
+  const saveDbBtn = document.createElement('button');
+  saveDbBtn.className='save-btn sb'; saveDbBtn.style.marginBottom='.7rem';
+  saveDbBtn.textContent='Guardar y conectar';
+  saveDbBtn.addEventListener('click', async () => {
+    SB_URL = urlInp.value.trim(); SB_KEY = keyInp.value.trim();
+    localStorage.setItem('mf_sb_url', SB_URL); localStorage.setItem('mf_sb_key', SB_KEY);
+    saveDbBtn.textContent='⏳ Probando...';
     await saveSB();
-    saveDbBtn.textContent = SB_STATUS==='ok' ? '✓ Conectado' : '✗ Error';
-    setTimeout(() => { saveDbBtn.textContent='Guardar y conectar'; render(); }, 1500);
-  }},['Guardar y conectar']);
+    saveDbBtn.textContent = SB_STATUS==='ok'?'✓ Conectado':'✗ Error';
+    setTimeout(()=>{ saveDbBtn.textContent='Guardar y conectar'; render(); },1500);
+  });
   sbSec.appendChild(saveDbBtn);
 
-  // SQL instructions
-  const sqlToggle = btn({cn:'ghost-btn',style:{width:'100%',marginBottom:'.5rem'}},['📋 Ver SQL para configurar Supabase']);
-  const sqlBox = div({style:{display:'none'}});
-  sqlToggle.addEventListener('click', () => {
-    sqlBox.style.display = sqlBox.style.display==='none' ? 'block':'none';
-    sqlToggle.textContent = sqlBox.style.display==='none' ? '📋 Ver SQL para configurar Supabase':'▲ Ocultar SQL';
+  const sqlToggle = document.createElement('button');
+  sqlToggle.className='ghost-btn'; sqlToggle.style.cssText='width:100%;margin-bottom:.5rem';
+  sqlToggle.textContent='📋 Ver SQL para configurar Supabase';
+  const sqlBox = document.createElement('div'); sqlBox.style.display='none';
+  sqlToggle.addEventListener('click',()=>{
+    const show = sqlBox.style.display==='none';
+    sqlBox.style.display = show?'block':'none';
+    sqlToggle.textContent = show?'▲ Ocultar SQL':'📋 Ver SQL para configurar Supabase';
   });
-  sqlBox.appendChild(pe({cn:'sub',style:{marginBottom:'.4rem'}},['1. Andá a supabase.com → tu proyecto → SQL Editor → New query']));
-  sqlBox.appendChild(pe({cn:'sub',style:{marginBottom:'.4rem'}},['2. Pegá esto y hacé clic en Run:']));
-  sqlBox.appendChild(div({cn:'sql-box',html:
-`create table if not exists mf_finanzas (
+  [pe({cn:'sub',style:{marginBottom:'.4rem'}},['1. Andá a supabase.com → tu proyecto → SQL Editor → New query']),
+   pe({cn:'sub',style:{marginBottom:'.4rem'}},['2. Pegá esto y hacé clic en Run:']),
+   div({cn:'sql-box',html:`create table if not exists mf_finanzas (
   session_id text primary key,
   data jsonb not null default '{}',
   updated_at timestamptz default now()
 );
 alter table mf_finanzas enable row level security;
 create policy "allow_all" on mf_finanzas
-  for all using (true) with check (true);`}));
-  sqlBox.appendChild(pe({cn:'sub',style:{marginBottom:'.4rem'}},['3. Copiá la URL del proyecto y la clave "anon public" desde Settings → API']));
-  sbSec.appendChild(sqlToggle);
-  sbSec.appendChild(sqlBox);
-  sbSec.appendChild(div({cn:'sub',style:{marginTop:'.6rem',padding:'.6rem',background:'#F0E6FF',borderRadius:'8px'}},
-    ['✓ Sincronización automática — todos tus dispositivos comparten los mismos datos.']));
+  for all using (true) with check (true);`}),
+   pe({cn:'sub',style:{marginBottom:'.4rem'}},['3. Copiá la URL y la clave "anon public" desde Settings → API'])
+  ].forEach(x=>sqlBox.appendChild(x));
+  sbSec.appendChild(sqlToggle); sbSec.appendChild(sqlBox);
+
+  const syncNote = document.createElement('div');
+  syncNote.className='sub'; syncNote.style.cssText='margin-top:.6rem;padding:.6rem;background:#F0E6FF;border-radius:8px';
+  syncNote.textContent='✓ Sincronización automática — todos tus dispositivos comparten los mismos datos.';
+  sbSec.appendChild(syncNote);
   root.appendChild(sbSec);
 
   // ── Categories ──
   const catSec = div({cn:'set-sec'});
   catSec.appendChild(div({cn:'set-sec-title'},['📂 Categorías']));
-  catSec.appendChild(pe({cn:'sub',style:{marginBottom:'.8rem'}},['Editá nombre, emoji, frecuencia y presupuesto de cada categoría.']));
+  catSec.appendChild(pe({cn:'sub',style:{marginBottom:'.8rem'}},['Nombre, emoji, frecuencia y presupuesto. Las semanales tienen día de inicio.']));
+
+  const EMOJIS_LIST = ['🛒','🏠','🏥','👦','👧','🚌','💳','📚','🐕','🐈','🧴','🏦','📦','🍕','🍎','☕','🧃','🎮','👗','👟','💊','🚗','⚡','📱','🎓','🏋️','🎨','🌿','🎵','✈️','🎁','💄','🔧','🧹','🏡','💰','🌻','❤️','⭐','🔑'];
+  const DAYS_ES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 
   S.data.cats.forEach((cat, i) => {
-    const row = div({cn:'cat-set-row',style:{borderLeftColor:cat.color}});
-    row.appendChild(div({cn:'',style:{width:'8px',height:'8px',borderRadius:'50%',background:cat.color,flexShrink:'0'}}));
+    if (!S.data.cats[i].subitems) S.data.cats[i].subitems=[];
+    const wrapper = document.createElement('div');
 
-    const eInp = inp({cn:'emoji-inp',value:cat.icon,maxlength:'2',style:{background:cat.bg}});
-    eInp.addEventListener('input', e => { S.data.cats[i].icon=e.target.value; });
-    row.appendChild(eInp);
+    const row = document.createElement('div');
+    row.className='cat-set-row'; row.style.borderLeftColor=cat.color;
 
-    const nInp = inp({cn:'name-inp',type:'text',value:cat.name,placeholder:'Nombre'});
-    nInp.addEventListener('input', e => { S.data.cats[i].name=e.target.value; });
+    const dotEl = document.createElement('div');
+    dotEl.style.cssText='width:8px;height:8px;border-radius:50%;background:'+cat.color+';flex-shrink:0';
+    row.appendChild(dotEl);
+
+    // Emoji picker
+    const emojiWrap = document.createElement('div');
+    emojiWrap.style.cssText='position:relative;flex-shrink:0';
+    const eInp = document.createElement('input');
+    eInp.className='emoji-inp'; eInp.value=cat.icon; eInp.maxLength=2;
+    eInp.style.background=cat.bg; eInp.style.cursor='pointer'; eInp.readOnly=true;
+    const picker = document.createElement('div');
+    picker.className='emoji-picker'; picker.style.display='none';
+    EMOJIS_LIST.forEach(em => {
+      const eb = document.createElement('button');
+      eb.textContent=em; eb.style.cssText='font-size:1.2rem;padding:.3rem;border-radius:7px;border:none;background:none;cursor:pointer;line-height:1';
+      eb.addEventListener('mouseover',()=>eb.style.background='var(--purple-light)');
+      eb.addEventListener('mouseout',()=>eb.style.background='none');
+      eb.addEventListener('click',()=>{ S.data.cats[i].icon=em; eInp.value=em; picker.style.display='none'; });
+      picker.appendChild(eb);
+    });
+    eInp.addEventListener('click', e => {
+      e.stopPropagation();
+      const showing = picker.style.display!=='none';
+      document.querySelectorAll('.emoji-picker').forEach(p=>p.style.display='none');
+      picker.style.display = showing?'none':'grid';
+    });
+    emojiWrap.appendChild(eInp); emojiWrap.appendChild(picker);
+    row.appendChild(emojiWrap);
+
+    // Name
+    const nInp = document.createElement('input');
+    nInp.className='name-inp'; nInp.type='text'; nInp.value=cat.name; nInp.placeholder='Nombre';
+    nInp.addEventListener('input', e=>{ S.data.cats[i].name=e.target.value; });
     row.appendChild(nInp);
 
     // Freq toggle
-    const fseg = div({cn:'seg',style:{flex:'0 0 auto',width:'110px',marginLeft:'.3rem'}});
-    const fw = btn({cn:'seg-btn'+(cat.freq==='semanal'?' on':''),style:{fontSize:'.65rem',padding:'.3rem'},onClick:() => { S.data.cats[i].freq='semanal'; fw.className='seg-btn on'; fm.className='seg-btn'; }},['📅Sem']);
-    const fm = btn({cn:'seg-btn'+(cat.freq==='mensual'?' on':''),style:{fontSize:'.65rem',padding:'.3rem'},onClick:() => { S.data.cats[i].freq='mensual'; fm.className='seg-btn on'; fw.className='seg-btn'; }},['📆Mes']);
+    const fseg = document.createElement('div');
+    fseg.className='seg'; fseg.style.cssText='flex:0 0 auto;width:110px;margin-left:.3rem';
+    const fw = document.createElement('button'); fw.className='seg-btn'+(cat.freq==='semanal'?' on':''); fw.style.cssText='font-size:.65rem;padding:.3rem'; fw.textContent='📅Sem';
+    const fm = document.createElement('button'); fm.className='seg-btn'+(cat.freq==='mensual'?' on':''); fm.style.cssText='font-size:.65rem;padding:.3rem'; fm.textContent='📆Mes';
+    fw.addEventListener('click',()=>{ S.data.cats[i].freq='semanal'; fw.className='seg-btn on'; fm.className='seg-btn'; weekRow.style.display='flex'; });
+    fm.addEventListener('click',()=>{ S.data.cats[i].freq='mensual'; fm.className='seg-btn on'; fw.className='seg-btn'; weekRow.style.display='none'; });
     fseg.appendChild(fw); fseg.appendChild(fm); row.appendChild(fseg);
 
-    // Budget input
-    const bInp = inp({cn:'bud-inp',type:'number',placeholder:'$0',value:cat.budget||''});
-    bInp.addEventListener('input', e => { S.data.cats[i].budget=Number(e.target.value); });
+    // Budget
+    const bInp = document.createElement('input');
+    bInp.className='bud-inp'; bInp.type='number'; bInp.placeholder='$0'; bInp.value=cat.budget||'';
+    bInp.addEventListener('input', e=>{ S.data.cats[i].budget=Number(e.target.value); });
     row.appendChild(bInp);
 
-    catSec.appendChild(row);
+    // Add sub-item btn
+    const addSub = document.createElement('button');
+    addSub.style.cssText='font-size:1.1rem;color:var(--purple);font-weight:800;padding:0 .3rem;min-height:36px;flex-shrink:0;background:none;border:none;cursor:pointer';
+    addSub.title='Agregar sub-ítem'; addSub.textContent='＋';
+    addSub.addEventListener('click',()=>{ S.data.cats[i].subitems.push({id:Date.now(),name:'',budget:0}); renderSubs(); });
+    row.appendChild(addSub);
+    wrapper.appendChild(row);
+
+    // Week start day row (only for semanal)
+    const weekRow = document.createElement('div');
+    weekRow.style.cssText = 'display:'+(cat.freq==='semanal'?'flex':'none')+';align-items:center;gap:.5rem;padding:.5rem .9rem;background:#F5EEFF;border-radius:0 0 10px 10px;flex-wrap:wrap';
+    const wlbl = document.createElement('span'); wlbl.className='sub'; wlbl.textContent='Inicia el:';
+    weekRow.appendChild(wlbl);
+    DAYS_ES.forEach(day => {
+      const db = document.createElement('button');
+      db.className='chip'+((cat.weekStart||'Lunes')===day?' on':'');
+      db.style.cssText='font-size:.7rem;padding:.25rem .6rem;min-height:30px';
+      db.textContent=day;
+      db.addEventListener('click',()=>{
+        S.data.cats[i].weekStart=day;
+        weekRow.querySelectorAll('.chip').forEach((b,bi)=>b.className='chip'+(DAYS_ES[bi]===day?' on':''));
+      });
+      weekRow.appendChild(db);
+    });
+    wrapper.appendChild(weekRow);
+
+    // Sub-items
+    const subList = document.createElement('div'); subList.className='subitem-list';
+    function renderSubs() {
+      subList.innerHTML='';
+      (S.data.cats[i].subitems||[]).forEach((sub,j)=>{
+        const sr = document.createElement('div'); sr.className='subitem-row';
+        const sni=document.createElement('input'); sni.className='subitem-name'; sni.type='text'; sni.placeholder='Ej: Terapeuta...'; sni.value=sub.name;
+        sni.addEventListener('input',e=>S.data.cats[i].subitems[j].name=e.target.value);
+        const sai=document.createElement('input'); sai.className='subitem-amt'; sai.type='number'; sai.placeholder='$0'; sai.value=sub.budget||'';
+        sai.addEventListener('input',e=>{
+          S.data.cats[i].subitems[j].budget=Number(e.target.value);
+          const tot=S.data.cats[i].subitems.reduce((s,x)=>s+(x.budget||0),0);
+          if(tot>0){S.data.cats[i].budget=tot;bInp.value=tot;}
+        });
+        const sdel=document.createElement('button'); sdel.className='subitem-del'; sdel.textContent='✕';
+        sdel.addEventListener('click',()=>{S.data.cats[i].subitems.splice(j,1);renderSubs();});
+        sr.appendChild(sni);sr.appendChild(sai);sr.appendChild(sdel);
+        subList.appendChild(sr);
+      });
+    }
+    renderSubs();
+    wrapper.appendChild(subList);
+    catSec.appendChild(wrapper);
   });
 
   // Add category
-  catSec.appendChild(btn({cn:'ghost-btn',style:{width:'100%',marginTop:'.5rem',marginBottom:'.5rem'},onClick:() => {
-    const palette = CAT_PALETTES[S.data.cats.length % CAT_PALETTES.length];
-    S.data.cats.push({id:'cat_'+Date.now(),name:'Nueva',icon:'✨',color:palette.color,bg:palette.bg,freq:'mensual',budget:0});
+  const addCatBtn = document.createElement('button');
+  addCatBtn.className='ghost-btn'; addCatBtn.style.cssText='width:100%;margin-top:.5rem;margin-bottom:.5rem';
+  addCatBtn.textContent='+ Agregar categoría';
+  addCatBtn.addEventListener('click',()=>{
+    const palette=CAT_PALETTES[S.data.cats.length%CAT_PALETTES.length];
+    S.data.cats.push({id:'cat_'+Date.now(),name:'Nueva',icon:'✨',color:palette.color,bg:palette.bg,freq:'mensual',budget:0,weekStart:'Lunes',subitems:[]});
     render();
-  }},['+ Agregar categoría']));
-
+  });
+  catSec.appendChild(addCatBtn);
   root.appendChild(catSec);
 
-  // Save button
-  const saveCatBtn = btn({cn:'save-btn',onClick:() => {
+  // Save
+  const saveCatBtn = document.createElement('button');
+  saveCatBtn.className='save-btn'; saveCatBtn.textContent='Guardar cambios';
+  saveCatBtn.addEventListener('click',()=>{
     save();
-    saveCatBtn.textContent='✓ ¡Guardado!';
-    saveCatBtn.classList.add('ok');
+    saveCatBtn.textContent='✓ ¡Guardado!'; saveCatBtn.classList.add('ok');
     setTimeout(()=>{ saveCatBtn.textContent='Guardar cambios'; saveCatBtn.classList.remove('ok'); },1500);
-  }},['Guardar cambios']);
+  });
   root.appendChild(saveCatBtn);
 
   // Export/Import
   const expSec = div({cn:'set-sec',style:{marginTop:'1.4rem'}});
   expSec.appendChild(div({cn:'set-sec-title'},['💾 Respaldo']));
-  const btnRow = div({style:{display:'flex',gap:'.7rem'}});
+  const btnRow2 = document.createElement('div'); btnRow2.style.cssText='display:flex;gap:.7rem';
 
-  btnRow.appendChild(btn({cn:'ghost-btn',style:{flex:'1'},onClick:() => {
+  const expBtn = document.createElement('button'); expBtn.className='ghost-btn'; expBtn.style.flex='1';
+  expBtn.textContent='📤 Exportar JSON';
+  expBtn.addEventListener('click',()=>{
     const blob=new Blob([JSON.stringify(S.data,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a'); a.href=url; a.download='mis_finanzas_backup.json'; a.click();
+    const a=document.createElement('a');a.href=url;a.download='mis_finanzas_backup.json';a.click();
     URL.revokeObjectURL(url);
-  }},['📤 Exportar JSON']));
-
-  const fileInp = inp({type:'file',accept:'.json',style:{display:'none'}});
-  fileInp.addEventListener('change', async e => {
-    const file=e.target.files[0]; if(!file)return;
-    const text=await file.text();
-    try { S.data=JSON.parse(text); save(); alert('✓ Datos importados correctamente'); render(); }
-    catch { alert('Error: el archivo no es válido'); }
   });
-  btnRow.appendChild(btn({cn:'ghost-btn',style:{flex:'1'},onClick:()=>fileInp.click()},[fileInp,'📥 Importar JSON']));
-  expSec.appendChild(btnRow);
+
+  const fileInp2 = document.createElement('input'); fileInp2.type='file'; fileInp2.accept='.json'; fileInp2.style.display='none';
+  fileInp2.addEventListener('change',async e=>{
+    const file=e.target.files[0];if(!file)return;
+    const text=await file.text();
+    try{S.data=JSON.parse(text);save();alert('✓ Datos importados');render();}
+    catch{alert('Error: archivo no válido');}
+  });
+  const impBtn = document.createElement('button'); impBtn.className='ghost-btn'; impBtn.style.flex='1';
+  impBtn.textContent='📥 Importar JSON';
+  impBtn.addEventListener('click',()=>fileInp2.click());
+
+  btnRow2.appendChild(expBtn); btnRow2.appendChild(fileInp2); btnRow2.appendChild(impBtn);
+  expSec.appendChild(btnRow2);
   root.appendChild(expSec);
+}
+
+// ═══════════════════════════════════════════════
+// PROJECTED VIEW
+// ═══════════════════════════════════════════════
+function rProjected(c) {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+
+  const hdr = div({style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'.5rem'}});
+  hdr.appendChild(h2e({cn:'page-title',style:{margin:'0'}},['Proyectados']));
+  const togBtn = document.createElement('button');
+  togBtn.className='pill-btn'; togBtn.textContent=S.projForm?'✕ Cerrar':'+ Nuevo';
+  togBtn.addEventListener('click',()=>{ S.projForm=!S.projForm; render(); });
+  hdr.appendChild(togBtn);
+  root.appendChild(hdr);
+  root.appendChild(pe({cn:'sub',style:{marginBottom:'1rem'}},['Planificá gastos futuros. Cuando llegue el mes, aparece una alerta en Inicio.']));
+
+  const cms = mk();
+
+  if (S.projForm) {
+    const form = document.createElement('div');
+    form.style.cssText='background:#FFF;border:2px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:1rem';
+
+    const ni = inp({cn:'txt-inp',type:'text',placeholder:'Zapatillas, dentista, crema...',style:{marginBottom:'.7rem'}});
+    form.appendChild(ni);
+
+    const aw = div({cn:'amt-wrap',style:{marginBottom:'.7rem'}});
+    aw.appendChild(div({cn:'amt-sign'},['$']));
+    const ai = inp({cn:'amt-inp',type:'number',placeholder:'0'});
+    aw.appendChild(ai); form.appendChild(aw);
+
+    // Month/year picker
+    const today2 = new Date();
+    const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    let selYear = today2.getFullYear();
+    let selMonth = today2.getMonth();
+
+    const dateLbl = document.createElement('label');
+    dateLbl.className='flbl'; dateLbl.style.marginBottom='.4rem'; dateLbl.textContent='¿Para cuándo?';
+    form.appendChild(dateLbl);
+
+    const yearRow = document.createElement('div');
+    yearRow.style.cssText='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
+    const yb = document.createElement('button'); yb.className='arrbtn'; yb.style.cssText='width:32px;height:32px;min-height:32px;font-size:.9rem'; yb.textContent='←';
+    const yl = document.createElement('span'); yl.style.cssText="font-family:'Lora',serif;font-weight:700;font-size:1rem;flex:1;text-align:center"; yl.textContent=String(selYear);
+    const yf = document.createElement('button'); yf.className='arrbtn'; yf.style.cssText='width:32px;height:32px;min-height:32px;font-size:.9rem'; yf.textContent='→';
+    yb.addEventListener('click',()=>{ selYear--; yl.textContent=String(selYear); });
+    yf.addEventListener('click',()=>{ selYear++; yl.textContent=String(selYear); });
+    yearRow.appendChild(yb); yearRow.appendChild(yl); yearRow.appendChild(yf);
+    form.appendChild(yearRow);
+
+    const mGrid = document.createElement('div');
+    mGrid.style.cssText='display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.9rem';
+    const mBtns=[];
+    MONTHS_SHORT.forEach((m,idx2)=>{
+      const mb=document.createElement('button');
+      mb.className='chip'+(idx2===selMonth?' on':'');
+      mb.style.cssText='font-size:.78rem;padding:.35rem .2rem;min-height:34px';
+      mb.textContent=m;
+      mb.addEventListener('click',()=>{ selMonth=idx2; mBtns.forEach((b,k)=>b.className='chip'+(k===selMonth?' on':'')); });
+      mBtns.push(mb); mGrid.appendChild(mb);
+    });
+    form.appendChild(mGrid);
+
+    const addBtn = document.createElement('button');
+    addBtn.className='save-btn'; addBtn.textContent='Agregar';
+    addBtn.addEventListener('click',()=>{
+      const name=ni.value.trim(); const amt=Number(ai.value);
+      if(!name||!amt) return;
+      const target=selYear+'-'+String(selMonth+1).padStart(2,'0');
+      S.data.projected.push({id:Date.now(),name,amount:amt,targetMonth:target,done:false});
+      save(); S.projForm=false; render();
+    });
+    form.appendChild(addBtn);
+    root.appendChild(form);
+  }
+
+  const sorted=S.data.projected.slice().sort((a,b)=>a.targetMonth.localeCompare(b.targetMonth));
+  if(!sorted.length) root.appendChild(pe({cn:'empty'},['Nada proyectado aún. ¡Agregá algo!']));
+
+  sorted.forEach(p=>{
+    const isNow=p.targetMonth===cms, isPast=p.targetMonth<cms;
+    const card=document.createElement('div');
+    card.className='proj-card'+(p.done?' past':isNow?' now':'');
+
+    const top=document.createElement('div'); top.className='proj-top';
+    const pn=document.createElement('span'); pn.style.cssText='font-size:.9rem;font-weight:700;color:var(--text)';
+    pn.style.textDecoration=p.done?'line-through':'none'; pn.textContent=p.name;
+    const pa=document.createElement('span'); pa.style.cssText="font-family:'Lora',serif;font-weight:700"; pa.textContent=fmt(p.amount);
+    top.appendChild(pn); top.appendChild(pa); card.appendChild(top);
+
+    const tag=document.createElement('div');
+    tag.className='ptag '+(p.done?'done':isNow?'now':!isPast?'future':'done');
+    tag.textContent=p.done?'✓ Ejecutado':isNow?'⚠️ Este mes':!isPast?'📅 '+p.targetMonth:'Pasado';
+    card.appendChild(tag);
+
+    const btns=document.createElement('div'); btns.className='proj-btns';
+    const bd=document.createElement('button'); bd.className='pb g';
+    bd.textContent=p.done?'↩ Deshacer':'✓ Hecho';
+    bd.addEventListener('click',()=>{ S.data.projected=S.data.projected.map(x=>x.id===p.id?{...x,done:!x.done}:x); save();render(); });
+    const br=document.createElement('button'); br.className='pb r'; br.textContent='🗑 Eliminar';
+    br.addEventListener('click',()=>{ S.data.projected=S.data.projected.filter(x=>x.id!==p.id); save();render(); });
+    btns.appendChild(bd); btns.appendChild(br); card.appendChild(btns);
+    root.appendChild(card);
+  });
 }
 
 // ═══════════════════════════════════════════════
