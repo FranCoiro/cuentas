@@ -15,18 +15,39 @@ button,input,select,textarea{font-family:'Nunito',sans-serif;font-size:1rem}
 button{cursor:pointer;border:none;background:none}
 input{outline:none}
 
-/* ── Layout ── */
+/* ── Layout mobile ── */
 #app{display:flex;flex-direction:column;min-height:100vh;max-width:520px;margin:0 auto}
 #content{flex:1;overflow-y:auto;padding-bottom:calc(var(--bnav-h) + var(--safe-bot) + 8px)}
 .view{padding:1.2rem 1rem .5rem;animation:fadeIn .18s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-/* ── Bottom nav ── */
+/* ── Bottom nav (mobile) ── */
 .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:#fff;border-top:2px solid var(--border);display:flex;padding:.35rem 0;padding-bottom:calc(.35rem + var(--safe-bot));z-index:100;box-shadow:0 -4px 20px rgba(180,127,222,.15)}
 .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:.3rem 0;color:#C0B0D0;min-height:44px;justify-content:center}
 .ni.active{color:var(--purple)}
 .ni .ico{font-size:1.3rem;line-height:1}
 .ni .lbl{font-size:.58rem;font-weight:700;letter-spacing:.2px}
+
+/* ── Desktop ── */
+@media(min-width:768px){
+  body{background:linear-gradient(135deg,#F5EEFF 0%,#EAF6FF 50%,#EDFAF5 100%);min-height:100vh}
+  #app{flex-direction:row;max-width:1100px;min-height:100vh;margin:0 auto;background:none}
+  .bnav{position:fixed;left:max(0px,calc(50vw - 550px));top:0;bottom:auto;width:200px;max-width:200px;height:100vh;flex-direction:column;border-top:none;border-right:2px solid var(--border);background:#fff;padding:2rem 0 1rem;box-shadow:4px 0 20px rgba(180,127,222,.08);align-items:stretch;justify-content:flex-start;gap:.2rem;transform:none}
+  .bnav::before{content:"mis finanzas 💜";font-family:"Lora",serif;font-size:1.05rem;font-weight:700;color:var(--text);padding:0 1.4rem 1.5rem;display:block;border-bottom:2px solid var(--border);margin-bottom:.5rem}
+  .ni{flex:none;flex-direction:row;justify-content:flex-start;gap:.75rem;padding:.7rem 1.4rem;border-radius:0;min-height:48px}
+  .ni.active{background:var(--purple-light);color:var(--purple);position:relative}
+  .ni.active::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--purple);border-radius:0 3px 3px 0}
+  .ni .ico{font-size:1.2rem;flex-shrink:0}
+  .ni .lbl{font-size:.88rem;font-weight:700;letter-spacing:0}
+  #content{margin-left:200px;padding-bottom:2rem;min-height:100vh;background:transparent}
+  .view{max-width:760px;padding:2rem 2.5rem}
+  .cgrid{grid-template-columns:1fr 1fr 1fr}
+  .hero{border-radius:24px;padding:2rem}
+  .hero-bal{font-size:3.2rem}
+  .page-title{font-size:1.8rem}
+  .sec-title{font-size:1.25rem}
+  .inc-card,.move-card{padding:.95rem 1.1rem}
+}
 
 /* ── Loading / Setup overlays ── */
 #loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:1rem}
@@ -213,11 +234,9 @@ const DEFAULT_CATS = [
 // ═══════════════════════════════════════════════
 // SESSION & CONFIG
 // ═══════════════════════════════════════════════
-const SESSION_ID = (() => {
-  let s = localStorage.getItem('mf_sid');
-  if (!s) { s = 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2); localStorage.setItem('mf_sid', s); }
-  return s;
-})();
+function SESSION_ID() {
+  return 'francoiro_finanzas';
+}
 
 let SB_URL = localStorage.getItem('mf_sb_url') || '';
 let SB_KEY = localStorage.getItem('mf_sb_key') || '';
@@ -286,7 +305,7 @@ async function saveSB() {
     const r = await fetch(SB_URL + '/rest/v1/mf_finanzas', {
       method: 'POST',
       headers: {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
-      body: JSON.stringify({session_id: SESSION_ID, data: S.data, updated_at: new Date().toISOString()})
+      body: JSON.stringify({session_id: SESSION_ID(), data: S.data, updated_at: new Date().toISOString()})
     });
     SB_STATUS = r.ok ? 'ok' : 'error';
   } catch { SB_STATUS = 'error'; }
@@ -300,7 +319,7 @@ async function save() {
 async function loadData() {
   if (SB_URL && SB_KEY) {
     try {
-      const r = await fetch(SB_URL + '/rest/v1/mf_finanzas?session_id=eq.' + SESSION_ID + '&select=data', {
+      const r = await fetch(SB_URL + '/rest/v1/mf_finanzas?session_id=eq.' + SESSION_ID() + '&select=data', {
         headers: {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
       });
       if (r.ok) {
@@ -807,8 +826,8 @@ create policy "allow_all" on mf_finanzas
   sqlBox.appendChild(pe({cn:'sub',style:{marginBottom:'.4rem'}},['3. Copiá la URL del proyecto y la clave "anon public" desde Settings → API']));
   sbSec.appendChild(sqlToggle);
   sbSec.appendChild(sqlBox);
-  sbSec.appendChild(div({cn:'sub',style:{marginTop:'.5rem',padding:'.6rem',background:'#F0E6FF',borderRadius:'8px'}},
-    ['🔑 Tu ID de sesión: ', el('span',{style:{fontFamily:'monospace',fontSize:'.7rem',wordBreak:'break-all'}},[SESSION_ID])]));
+  sbSec.appendChild(div({cn:'sub',style:{marginTop:'.6rem',padding:'.6rem',background:'#F0E6FF',borderRadius:'8px'}},
+    ['✓ Sincronización automática — todos tus dispositivos comparten los mismos datos.']));
   root.appendChild(sbSec);
 
   // ── Categories ──
