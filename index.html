@@ -451,6 +451,7 @@ function rHome(c) {
   const inc = totalIncome(), exp = totalExpenses();
   const paidFixed = (S.data.fixed||[]).filter(f=>f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
   const bal = inc - exp - paidFixed;
+  const totalFixed = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
   const hero = div({cn:'hero'});
   hero.appendChild(div({cn:'hero-eye'},['balance del mes']));
   hero.appendChild(div({cn:'hero-bal ' + (bal >= 0 ? 'pos':'neg')},[(bal < 0 ? '–':'') + fmt(bal)]));
@@ -458,6 +459,10 @@ function rHome(c) {
   hr.appendChild(div({cn:'hero-half'},[sp('hh-lbl','↑ Ingresos'),sp('hh-val inc-val',fmt(inc))]));
   hr.appendChild(div({cn:'hero-div'}));
   hr.appendChild(div({cn:'hero-half'},[sp('hh-lbl','↓ Gastos'),sp('hh-val exp-val',fmt(exp))]));
+  if(paidFixed>0){
+    hr.appendChild(div({cn:'hero-div'}));
+    hr.appendChild(div({cn:'hero-half'},[sp('hh-lbl','📌 Fijos pagados'),sp('hh-val exp-val',fmt(paidFixed))]));
+  }
   hero.appendChild(hr);
 
   // Pusheen cat 🐱
@@ -1088,6 +1093,19 @@ create policy "allow_all" on mf_finanzas
     addSub.title='Agregar sub-ítem'; addSub.textContent='＋';
     addSub.addEventListener('click',()=>{ S.data.cats[i].subitems.push({id:Date.now(),name:'',budget:0}); renderSubs(); });
     row.appendChild(addSub);
+
+    // Delete category button
+    const delCat = document.createElement('button');
+    delCat.style.cssText='font-size:.9rem;color:#D0C0E0;font-weight:700;padding:0 .3rem;min-height:36px;flex-shrink:0;background:none;border:none;cursor:pointer';
+    delCat.title='Eliminar categoría'; delCat.textContent='🗑';
+    delCat.addEventListener('mouseover',()=>delCat.style.color='#E05050');
+    delCat.addEventListener('mouseout',()=>delCat.style.color='#D0C0E0');
+    delCat.addEventListener('click',()=>{
+      if(confirm('¿Eliminar la categoría "'+S.data.cats[i].name+'"?')){
+        S.data.cats.splice(i,1); render();
+      }
+    });
+    row.appendChild(delCat);
     wrapper.appendChild(row);
 
     // Week start day row (only for semanal)
