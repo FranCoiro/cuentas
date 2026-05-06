@@ -179,6 +179,21 @@ input{outline:none}
 .emoji-picker{position:absolute;z-index:200;background:#FFF;border:2px solid var(--border);border-radius:14px;padding:.6rem;box-shadow:0 8px 24px rgba(180,127,222,.2);display:grid;grid-template-columns:repeat(8,1fr);gap:2px;width:260px;max-height:200px;overflow-y:auto}
 .emoji-picker button{font-size:1.2rem;padding:.3rem;border-radius:7px;border:none;background:none;cursor:pointer;line-height:1}
 .emoji-picker button:hover{background:var(--purple-light)}
+.fondo-card{background:#FFF;border-radius:14px;padding:1rem 1.1rem;border:2px solid var(--border);margin-bottom:.6rem;cursor:pointer;transition:all .2s}
+.fondo-card:hover{border-color:var(--purple);box-shadow:0 4px 12px rgba(180,127,222,.15)}
+.fondo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.fondo-name{font-size:1rem;font-weight:800;color:var(--text)}
+.fondo-total{font-family:'Lora',serif;font-size:1.3rem;font-weight:700}
+.fondo-meta{font-size:.72rem;color:var(--muted);font-weight:600;margin-bottom:.5rem}
+.fondo-track{height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden;margin-bottom:.6rem}
+.fondo-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.fondo-history{border-top:2px solid var(--border);padding-top:.7rem;margin-top:.2rem;display:none}
+.fondo-history.open{display:block}
+.fondo-hist-row{display:flex;justify-content:space-between;align-items:center;padding:.3rem 0;border-bottom:1px solid #F0E6FF;font-size:.8rem}
+.fondo-hist-row:last-child{border-bottom:none}
+.fondo-add-form{background:#F5EEFF;border-radius:10px;padding:.7rem;margin-top:.6rem}
+.fondos-global{display:flex;align-items:center;gap:.75rem;background:linear-gradient(135deg,#E8D5FF,#D5F0E8);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.2rem;cursor:pointer}
+.fondos-global:hover{opacity:.9}
 .fixed-card{background:#FFF;border-radius:12px;padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem;border-left:4px solid var(--border);box-shadow:0 2px 8px rgba(180,127,222,.07);margin-bottom:.45rem;position:relative;transition:all .2s}
 .fixed-card.paid{background:#F0FFF4;border-left-color:#77DD77}
 .fixed-card.paid .fc-name{text-decoration:line-through;color:var(--muted)}
@@ -235,6 +250,7 @@ code{background:#F0E6FF;padding:.1rem .4rem;border-radius:4px;font-size:.78rem;c
     <button class="ni" data-view="income"><span class="ico">💰</span><span class="lbl">Ingresos</span></button>
     <button class="ni" data-view="expenses"><span class="ico">🛍️</span><span class="lbl">Gastos</span></button>
     <button class="ni" data-view="fixed"><span class="ico">📌</span><span class="lbl">Fijos</span></button>
+    <button class="ni" data-view="fondos"><span class="ico">🏦</span><span class="lbl">Fondos</span></button>
     <button class="ni" data-view="projected"><span class="ico">🔮</span><span class="lbl">Proyectados</span></button>
     <button class="ni" data-view="settings"><span class="ico">⚙️</span><span class="lbl">Ajustes</span></button>
   </nav>
@@ -277,7 +293,7 @@ function SESSION_ID() {
 }
 
 let SB_URL = localStorage.getItem('mf_sb_url') || 'https://kyikjnvzpaigtmrsjkuy.supabase.co';
-let SB_KEY = localStorage.getItem('mf_sb_key') || 'sb_publishable_qG2AfGGaMqsENVqOy-gNHw__TuBK_da';
+let SB_KEY = localStorage.getItem('mf_sb_key') || '';
 let SB_STATUS = 'none'; // 'none' | 'ok' | 'error'
 
 // ═══════════════════════════════════════════════
@@ -417,7 +433,7 @@ function go(view) {
 function render() {
   const c = document.getElementById('content');
   c.innerHTML = '';
-  ({home:rHome, income:rIncome, expenses:rExpenses, fixed:rFixed, projected:rProjected, settings:rSettings})[S.view]?.(c);
+  ({home:rHome, income:rIncome, expenses:rExpenses, fixed:rFixed, fondos:rFondos, projected:rProjected, settings:rSettings})[S.view]?.(c);
 }
 
 // ═══════════════════════════════════════════════
@@ -465,8 +481,29 @@ function rHome(c) {
   }
   hero.appendChild(hr);
 
-  // Pusheen cat 🐱
-  const cat = div({cn:'pusheen',html:`<svg viewBox="0 0 78 72" xmlns="http://www.w3.org/2000/svg">
+  // Pusheen + ahorro bubble
+  const ahorroId2 = (S.data.cats.find(c=>c.id==='ahorro'||c.name.toLowerCase().includes('ahorro')||c.name.toLowerCase().includes('fondo')))||null;
+  const ahorroAmt2 = ahorroId2 ? catMonthExpenses(ahorroId2.id) : 0;
+
+  const catZone = div({cn:'pusheen'});
+  catZone.style.cssText='position:absolute;bottom:0;right:8px;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none;z-index:2';
+
+  const fondosTotal = (S.data.fondos||[]).reduce((s,f)=>{
+    const total=(f.aportes||[]).reduce((a,ap)=>a+ap.amount,0);
+    const used=(f.retiros||[]).reduce((a,r)=>a+r.amount,0);
+    return s+total-used;
+  },0);
+  if(fondosTotal>0){
+    const bubble = document.createElement('div');
+    bubble.style.cssText='background:rgba(255,255,255,0.88);border:2px solid #77DD77;border-radius:12px;padding:3px 9px;text-align:center;cursor:pointer';
+    bubble.title='Ver fondos';
+    const bl = document.createElement('div'); bl.style.cssText='font-size:.52rem;font-weight:800;color:#2A7050;text-transform:uppercase;letter-spacing:.3px'; bl.textContent='🏦 Fondos';
+    const bv = document.createElement('div'); bv.style.cssText="font-family:'Lora',serif;font-size:.88rem;font-weight:700;color:#2A7050"; bv.textContent=fmt(fondosTotal);
+    bubble.appendChild(bl); bubble.appendChild(bv);
+    bubble.addEventListener('click', e=>{ e.stopPropagation(); go('fondos'); });
+    catZone.appendChild(bubble);
+  }
+  const cat = div({style:{width:'72px'},html:`<svg viewBox="0 0 78 72" xmlns="http://www.w3.org/2000/svg">
   <!-- Tail -->
   <path d="M60 50 C76 42 80 28 68 20 C62 16 57 22 62 27" stroke="#C2C2C2" stroke-width="8" fill="none" stroke-linecap="round"/>
   <path d="M61 48 C74 41 77 30 68 22" stroke="#ABABAB" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="4,3.5"/>
@@ -506,7 +543,8 @@ function rHome(c) {
   <line x1="46" y1="70" x2="46" y2="72" stroke="#B8B8B8" stroke-width="1.2" stroke-linecap="round"/>
   <line x1="50" y1="69" x2="50" y2="71" stroke="#B8B8B8" stroke-width="1.2" stroke-linecap="round"/>
 </svg>`});
-  hero.appendChild(cat);
+    catZone.appendChild(cat);
+  hero.appendChild(catZone);
 
   root.appendChild(hero);
 
@@ -1307,6 +1345,130 @@ function rProjected(c) {
     btns.appendChild(bd); btns.appendChild(br); card.appendChild(btns);
     root.appendChild(card);
   });
+}
+
+// ═══════════════════════════════════════════════
+// FONDOS VIEW
+// ═══════════════════════════════════════════════
+function rFondos(c) {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+  if (!S.data.fondos) S.data.fondos = [
+    {id:'f1', name:'Fondo Proyectados', icon:'🔮', color:'#C9A0DC', meta:0, aportes:[], retiros:[]},
+    {id:'f2', name:'Fondo Verano',      icon:'☀️', color:'#FFB347', meta:0, aportes:[], retiros:[]},
+    {id:'f3', name:'Fondo Ahorro',      icon:'🏦', color:'#77DD77', meta:0, aportes:[], retiros:[]},
+  ];
+
+  const totalGlobal = S.data.fondos.reduce((s,f)=>{
+    return s + (f.aportes||[]).reduce((a,ap)=>a+ap.amount,0) - (f.retiros||[]).reduce((a,r)=>a+r.amount,0);
+  },0);
+
+  // Global summary
+  const gbl = div({cn:'fondos-global'});
+  gbl.addEventListener('click',()=>{});
+  const gi = document.createElement('span'); gi.style.fontSize='2rem'; gi.textContent='🏦';
+  const ginfo = document.createElement('div'); ginfo.style.flex='1';
+  const gl = document.createElement('div'); gl.style.cssText='font-size:.68rem;font-weight:800;color:#5A4A6A;text-transform:uppercase;letter-spacing:.8px'; gl.textContent='Total en fondos';
+  const gv = document.createElement('div'); gv.style.cssText="font-family:'Lora',serif;font-size:1.8rem;font-weight:700;color:#3A3040"; gv.textContent=fmt(totalGlobal);
+  ginfo.appendChild(gl); ginfo.appendChild(gv);
+  gbl.appendChild(gi); gbl.appendChild(ginfo);
+  root.appendChild(gbl);
+
+  // Each fondo
+  S.data.fondos.forEach((f,fi) => {
+    const aportesTotal = (f.aportes||[]).reduce((s,a)=>s+a.amount,0);
+    const retirosTotal = (f.retiros||[]).reduce((s,r)=>s+r.amount,0);
+    const saldo = aportesTotal - retirosTotal;
+    const pct = f.meta>0 ? Math.min(100,(saldo/f.meta)*100) : 0;
+
+    const card = div({cn:'fondo-card'});
+
+    // Header
+    const hdr = div({cn:'fondo-header'});
+    const nm = document.createElement('span'); nm.className='fondo-name'; nm.textContent=f.icon+' '+f.name;
+    const tot = document.createElement('span'); tot.className='fondo-total'; tot.style.color=f.color; tot.textContent=fmt(saldo);
+    hdr.appendChild(nm); hdr.appendChild(tot);
+    card.appendChild(hdr);
+
+    // Meta
+    if(f.meta>0){
+      const mp = document.createElement('div'); mp.className='fondo-meta';
+      mp.textContent='Meta: '+fmt(f.meta)+' · '+Math.round(pct)+'% alcanzado';
+      card.appendChild(mp);
+      const track = div({cn:'fondo-track'},[div({cn:'fondo-fill',style:{width:pct+'%',background:f.color}})]);
+      card.appendChild(track);
+    }
+
+    // History toggle
+    const hist = div({cn:'fondo-history'});
+    const allMovs = [
+      ...(f.aportes||[]).map(a=>({...a,tipo:'aporte'})),
+      ...(f.retiros||[]).map(r=>({...r,tipo:'retiro'}))
+    ].sort((a,b)=>b.date.localeCompare(a.date));
+
+    if(allMovs.length){
+      allMovs.forEach(mov=>{
+        const row = div({cn:'fondo-hist-row'});
+        const ld = document.createElement('span'); ld.textContent=(mov.tipo==='aporte'?'↑ ':'↓ ')+(mov.note||mov.date);
+        const la = document.createElement('span'); la.style.fontWeight='800';
+        la.style.color=mov.tipo==='aporte'?'#2A7050':'#A03030';
+        la.textContent=(mov.tipo==='aporte'?'+':'-')+fmt(mov.amount)+' · '+mov.date;
+        row.appendChild(ld); row.appendChild(la);
+        hist.appendChild(row);
+      });
+    } else {
+      const em = document.createElement('p'); em.className='empty'; em.style.padding='.5rem 0'; em.textContent='Sin movimientos aún.';
+      hist.appendChild(em);
+    }
+
+    // Aporte form inside history
+    const af = div({cn:'fondo-add-form'});
+    const afRow = document.createElement('div'); afRow.style.cssText='display:flex;gap:.5rem;margin-bottom:.5rem';
+    const afAmt = inp({cn:'txt-inp',type:'number',placeholder:'Monto a aportar',style:{flex:'1'}});
+    const afNote = inp({cn:'txt-inp',type:'text',placeholder:'Nota (opcional)',style:{flex:'1'}});
+    afRow.appendChild(afAmt); afRow.appendChild(afNote); af.appendChild(afRow);
+
+    const afBtnRow = document.createElement('div'); afBtnRow.style.cssText='display:flex;gap:.5rem';
+    const afAdd = document.createElement('button'); afAdd.className='save-btn'; afAdd.style.cssText='flex:1;padding:.6rem'; afAdd.textContent='＋ Aportar';
+    afAdd.addEventListener('click',()=>{
+      const amt=Number(afAmt.value); if(!amt) return;
+      if(!S.data.fondos[fi].aportes) S.data.fondos[fi].aportes=[];
+      S.data.fondos[fi].aportes.push({id:Date.now(),amount:amt,date:new Date().toISOString().split('T')[0],note:afNote.value.trim()});
+      save(); render();
+    });
+    const afRet = document.createElement('button'); afRet.className='ghost-btn'; afRet.style.cssText='flex:1;padding:.6rem'; afRet.textContent='↓ Retirar';
+    afRet.addEventListener('click',()=>{
+      const amt=Number(afAmt.value); if(!amt) return;
+      if(!S.data.fondos[fi].retiros) S.data.fondos[fi].retiros=[];
+      S.data.fondos[fi].retiros.push({id:Date.now(),amount:amt,date:new Date().toISOString().split('T')[0],note:afNote.value.trim()});
+      save(); render();
+    });
+    afBtnRow.appendChild(afAdd); afBtnRow.appendChild(afRet); af.appendChild(afBtnRow);
+    hist.appendChild(af);
+    card.appendChild(hist);
+
+    // Toggle click
+    card.addEventListener('click',()=>{
+      hist.classList.toggle('open');
+    });
+
+    root.appendChild(card);
+  });
+
+  // Add fondo button
+  const addFondoBtn = document.createElement('button');
+  addFondoBtn.className='ghost-btn'; addFondoBtn.style.cssText='width:100%;margin-top:.5rem';
+  addFondoBtn.textContent='+ Crear nuevo fondo';
+  addFondoBtn.addEventListener('click',()=>{
+    const name=prompt('Nombre del fondo:'); if(!name) return;
+    const meta=Number(prompt('Meta en pesos (0 si no tenés meta):')||0);
+    const icons=['💡','🎯','🌟','💎','🚀','🏖️','🎓','🏥'];
+    const colors=['#FF9AA2','#87CEEB','#B5EAD7','#FDFD96','#C9A0DC','#FFB347','#7EC8C8','#AEC6CF'];
+    const idx2=S.data.fondos.length%icons.length;
+    S.data.fondos.push({id:'f_'+Date.now(),name,icon:icons[idx2],color:colors[idx2],meta,aportes:[],retiros:[]});
+    save(); render();
+  });
+  root.appendChild(addFondoBtn);
 }
 
 // ═══════════════════════════════════════════════
