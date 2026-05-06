@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Mis Finanzas 💜</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--purple:#B47FDE;--purple-light:#F0E6FF;--purple-mid:#C9A0DC;--green:#77DD77;--green-dark:#2A7050;--red:#FF6B6B;--red-dark:#A03030;--text:#3A3040;--muted:#9A8AAA;--border:#E8D5FF;--bg:#FDF6FF;--card:#FFF;--bnav-h:60px;--safe-bot:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font-family:'Nunito',sans-serif;font-size:1rem}
+button{cursor:pointer;border:none;background:none}
+input{outline:none}
+
+/* ── Layout ── */
+#app{display:flex;flex-direction:column;min-height:100vh;max-width:520px;margin:0 auto}
+#content{flex:1;overflow-y:auto;padding-bottom:calc(var(--bnav-h) + var(--safe-bot) + 8px)}
+.view{padding:1.2rem 1rem .5rem;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── Bottom nav ── */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:#fff;border-top:2px solid var(--border);display:flex;padding:.35rem 0;padding-bottom:calc(.35rem + var(--safe-bot));z-index:100;box-shadow:0 -4px 20px rgba(180,127,222,.15)}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:.3rem 0;color:#C0B0D0;min-height:44px;justify-content:center}
+.ni.active{color:var(--purple)}
+.ni .ico{font-size:1.3rem;line-height:1}
+.ni .lbl{font-size:.58rem;font-weight:700;letter-spacing:.2px}
+
+/* ── Loading / Setup overlays ── */
+#loading{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:1rem}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#setup{position:fixed;inset:0;background:var(--bg);z-index:998;overflow-y:auto;padding:2rem 1.2rem}
+
+/* ── Typography ── */
+.page-title{font-family:'Lora',serif;font-size:1.5rem;font-weight:700;color:var(--text);margin-bottom:1.1rem}
+.sec-title{font-family:'Lora',serif;font-size:1.1rem;font-weight:700;margin-bottom:.7rem}
+.sub{font-size:.78rem;color:var(--muted);line-height:1.5}
+.empty{font-size:.85rem;color:#C0B0D0;text-align:center;padding:2rem 1rem}
+
+/* ── Month strip ── */
+.mstrip{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem}
+.mname{font-family:'Lora',serif;font-size:1.4rem;font-weight:700}
+.myear{color:var(--muted);font-weight:600}
+.arrbtn{background:var(--purple-light);color:#8B5BAE;width:36px;height:36px;border-radius:50%;font-size:1rem;font-weight:800;display:flex;align-items:center;justify-content:center;min-height:44px;min-width:44px}
+.arrbtn:active{background:#E0D0F8}
+
+/* ── Hero card ── */
+.hero{background:linear-gradient(135deg,#E8D5FF,#C9E8FF 50%,#D5F0E8);border-radius:20px;padding:1.4rem;margin-bottom:1.3rem;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;top:-30px;right:-30px;width:110px;height:110px;background:rgba(255,255,255,.25);border-radius:50%}
+.hero-eye{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#7A6A90;margin-bottom:.35rem}
+.hero-bal{font-family:'Lora',serif;font-size:2.6rem;font-weight:700;letter-spacing:-.5px;margin-bottom:1rem}
+.hero-bal.pos{color:#2A5040}.hero-bal.neg{color:var(--red-dark)}
+.hero-row{display:flex;background:rgba(255,255,255,.5);border-radius:12px;padding:.6rem}
+.hero-half{display:flex;flex-direction:column;flex:1;align-items:center;gap:2px}
+.hh-lbl{font-size:.68rem;font-weight:700;color:#7A6A90}
+.hh-val{font-size:.9rem;font-weight:800}
+.inc-val{color:var(--green-dark)}.exp-val{color:var(--red-dark)}
+.hero-div{width:1px;background:rgba(255,255,255,.6);margin:0 .5rem}
+.pusheen{position:absolute;bottom:0;right:8px;width:72px;pointer-events:none;z-index:2}
+.pusheen svg{display:block;animation:catbob 3s ease-in-out infinite;filter:drop-shadow(0 2px 4px rgba(150,120,180,.2))}
+@keyframes catbob{0%,100%{transform:translateY(0) rotate(0deg)}40%{transform:translateY(-5px) rotate(-1deg)}60%{transform:translateY(-3px) rotate(1deg)}}
+
+/* ── Alert ── */
+.alert-box{display:flex;gap:.6rem;background:#FFF9E0;border:2px solid #FFE066;border-radius:12px;padding:.75rem;margin-bottom:1rem;font-size:.8rem}
+.al-row{color:#7A6A00;margin-top:2px}
+
+/* ── Buttons ── */
+.pill-btn{background:var(--purple-light);border-radius:20px;padding:.4rem .9rem;font-size:.75rem;font-weight:700;color:#8B5BAE;min-height:36px}
+.pill-btn:active{background:#E0D0F8}
+.pill-btn.g{background:#D5F0E0;color:var(--green-dark)}
+.pill-btn.r{background:#FFE8E8;color:var(--red-dark)}
+.save-btn{width:100%;padding:.9rem;background:linear-gradient(135deg,var(--purple-mid),#87CEEB);color:#fff;border-radius:12px;font-size:1rem;font-weight:800;min-height:48px}
+.save-btn:active{opacity:.88}
+.save-btn.ok{background:linear-gradient(135deg,var(--green),#7EC8C8)!important}
+.save-btn.sb{background:linear-gradient(135deg,#5BC0EB,#7EC8C8)!important}
+.ghost-btn{background:none;border:2px solid var(--border);border-radius:10px;padding:.6rem 1rem;font-size:.85rem;font-weight:700;color:var(--muted)}
+
+/* ── Category cards ── */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem}
+@media(max-width:340px){.cgrid{grid-template-columns:1fr}}
+.ctile{border-radius:14px;padding:.85rem;border:2px solid transparent;position:relative}
+.ct-top{display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem}
+.ct-emoji{font-size:1rem}.ct-name{font-size:.7rem;font-weight:700;color:#6A5A7A;line-height:1.2;flex:1}
+.ct-spent{font-family:'Lora',serif;font-size:1rem;font-weight:700;margin-bottom:.3rem}
+.ct-sub{font-size:.63rem;color:var(--muted);font-weight:600;margin-bottom:.3rem}
+.ct-track{height:4px;background:rgba(0,0,0,.1);border-radius:2px;overflow:hidden;margin-bottom:.25rem}
+.ct-fill{height:100%;border-radius:2px;transition:width .5s ease}
+.ct-rem{font-size:.65rem;font-weight:700}
+.ct-rem.ok{color:var(--green-dark)}.ct-rem.warn{color:#E07A00}.ct-rem.over{color:var(--red-dark)}
+.freq-badge{position:absolute;top:.6rem;right:.6rem;font-size:.55rem;font-weight:800;padding:.1rem .35rem;border-radius:8px;text-transform:uppercase;letter-spacing:.3px}
+.freq-w{background:#E8F0FF;color:#5070C0}
+.freq-m{background:#F0F8E8;color:#508040}
+
+/* ── Form fields ── */
+.field{margin-bottom:.9rem}
+.flbl{display:block;font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:.35rem}
+.txt-inp{width:100%;background:#FFF;border:2px solid var(--border);border-radius:10px;padding:.7rem .85rem;color:var(--text);font-size:.9rem;font-weight:600;min-height:44px}
+.txt-inp:focus{border-color:var(--purple)}
+.amt-wrap{display:flex;align-items:center;background:#FFF;border:2px solid var(--border);border-radius:10px;overflow:hidden}
+.amt-sign{padding:0 .85rem;font-size:.95rem;font-weight:700;color:var(--muted);background:#F5EEFF;border-right:2px solid var(--border);align-self:stretch;display:flex;align-items:center}
+.amt-inp{flex:1;background:none;border:none;padding:.7rem .8rem;color:var(--text);font-family:'Lora',serif;font-size:1.5rem;font-weight:700;min-height:48px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+.seg{display:flex;background:#F5EEFF;border-radius:10px;padding:3px;gap:3px;margin-bottom:1rem}
+.seg-btn{flex:1;padding:.55rem;border-radius:8px;font-size:.82rem;font-weight:700;color:var(--muted);min-height:36px}
+.seg-btn.on{background:#FFF;color:var(--purple);box-shadow:0 1px 4px rgba(180,127,222,.2)}
+
+/* ── Income list ── */
+.inc-list,.move-list{display:flex;flex-direction:column;gap:.45rem}
+.inc-card,.move-card{background:#FFF;border-radius:11px;padding:.8rem;display:flex;align-items:center;gap:.7rem;border-left:4px solid;box-shadow:0 2px 8px rgba(180,127,222,.07)}
+.inc-card{border-left-color:var(--green)}
+.card-icon{font-size:1.1rem;flex-shrink:0}
+.card-info{flex:1;min-width:0}
+.card-desc{font-size:.87rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:.68rem;color:var(--muted);margin-top:1px;font-weight:600}
+.card-amt{font-family:'Lora',serif;font-size:1rem;font-weight:700;white-space:nowrap}
+.del-x{color:#D0C0E0;font-size:1rem;font-weight:700;padding:.2rem .4rem;min-height:36px;min-width:36px;display:flex;align-items:center;justify-content:center}
+.del-x:active{color:var(--red-dark)}
+.total-row{display:flex;justify-content:space-between;align-items:center;background:#E8F8EE;border-radius:10px;padding:.7rem .9rem;margin-bottom:.9rem;font-size:.82rem;font-weight:700}
+
+/* ── Category picker ── */
+.cat-picker{display:flex;flex-wrap:wrap;gap:.4rem}
+.cp-btn{padding:.32rem .7rem;border-radius:20px;border:2px solid;background:#FFF;font-size:.72rem;font-weight:700;color:#5A4A6A;min-height:36px}
+.cp-btn.on{color:#333}
+
+/* ── Chips (moves filter) ── */
+.chip-row{display:flex;gap:.4rem;overflow-x:auto;padding-bottom:.4rem;margin-bottom:.8rem;scrollbar-width:none}
+.chip-row::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;padding:.32rem .8rem;border-radius:20px;border:2px solid var(--border);background:#FFF;font-size:.72rem;font-weight:700;color:var(--muted);min-height:36px}
+.chip.on{background:var(--purple-light);border-color:var(--purple);color:#8B5BAE}
+
+/* ── Projected ── */
+.proj-card{background:#FFF;border:2px solid var(--border);border-radius:12px;padding:.9rem;margin-bottom:.5rem}
+.proj-card.now{border-color:#FFE066;background:#FFFBE8}
+.proj-card.past{opacity:.55}
+.proj-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem}
+.ptag{display:inline-block;padding:.12rem .55rem;border-radius:10px;font-size:.67rem;font-weight:800;margin-bottom:.45rem}
+.ptag.now{background:#FFF3CC;color:#A08000}
+.ptag.future{background:#E8F5E8;color:var(--green-dark)}
+.ptag.done{background:#F0F0F0;color:var(--muted)}
+.proj-btns{display:flex;gap:.4rem}
+.pb{padding:.28rem .7rem;border-radius:20px;border:2px solid;background:#FFF;font-size:.72rem;font-weight:700;min-height:36px}
+.pb.g{border-color:var(--green);color:var(--green-dark)}
+.pb.r{border-color:var(--red);color:var(--red-dark)}
+
+/* ── Settings ── */
+.set-sec{margin-bottom:1.4rem}
+.set-sec-title{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:.6rem}
+.cat-set-row{display:flex;align-items:center;gap:.6rem;background:#FFF;border:2px solid var(--border);border-left:5px solid;border-radius:11px;padding:.65rem .9rem;margin-bottom:.45rem}
+.emoji-inp{width:38px;text-align:center;border:2px solid var(--border);border-radius:7px;padding:.3rem;font-size:1rem;flex-shrink:0;background:#FBF5FF;min-height:36px}
+.emoji-inp:focus{border-color:var(--purple)}
+.name-inp{flex:1;background:none;border:none;border-bottom:2px solid var(--border);color:var(--text);font-size:.88rem;font-weight:700;padding:.2rem .1rem;min-height:36px}
+.name-inp:focus{border-bottom-color:var(--purple)}
+.bud-inp{width:90px;background:#FBF5FF;border:2px solid var(--border);border-radius:7px;padding:.3rem .5rem;font-size:.8rem;font-weight:700;color:var(--text);min-height:36px}
+.bud-inp:focus{border-color:var(--purple)}
+.sb-input{width:100%;background:#FFF;border:2px solid var(--border);border-radius:10px;padding:.7rem .85rem;color:var(--text);font-size:.82rem;font-weight:600;margin-bottom:.6rem;min-height:44px}
+.sb-input:focus{border-color:var(--purple)}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:.4rem}
+.status-ok{background:#77DD77}.status-err{background:#FF6B6B}.status-none{background:#D0C0E0}
+code{background:#F0E6FF;padding:.1rem .4rem;border-radius:4px;font-size:.78rem;color:#6030A0;display:block;margin:.3rem 0;word-break:break-all;font-family:monospace;line-height:1.6}
+.sql-box{background:#1E1E2E;color:#CDD6F4;padding:1rem;border-radius:12px;margin:.6rem 0;font-family:monospace;font-size:.75rem;line-height:1.7;overflow-x:auto;white-space:pre}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span style="font-size:.85rem;color:var(--muted);font-weight:600">Cargando...</span>
+</div>
+
+<div id="app" style="display:none">
+  <div id="content"></div>
+  <nav class="bnav">
+    <button class="ni active" data-view="home"><span class="ico">🏠</span><span class="lbl">Inicio</span></button>
+    <button class="ni" data-view="income"><span class="ico">💰</span><span class="lbl">Ingresos</span></button>
+    <button class="ni" data-view="expenses"><span class="ico">🛍️</span><span class="lbl">Gastos</span></button>
+    <button class="ni" data-view="projected"><span class="ico">🔮</span><span class="lbl">Proyectados</span></button>
+    <button class="ni" data-view="settings"><span class="ico">⚙️</span><span class="lbl">Ajustes</span></button>
+  </nav>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+const CAT_PALETTES = [
+  {color:'#FFB347',bg:'#FFF4E0'},{color:'#77DD77',bg:'#EDFAED'},{color:'#FF9AA2',bg:'#FFF0F1'},
+  {color:'#87CEEB',bg:'#EAF6FF'},{color:'#C9A0DC',bg:'#F5EEFF'},{color:'#7EC8C8',bg:'#E8FAFA'},
+  {color:'#F9C74F',bg:'#FDFDE8'},{color:'#B5EAD7',bg:'#EDFAF5'},{color:'#AEC6CF',bg:'#EAF3F6'},
+  {color:'#D4C5F9',bg:'#F5F0FF'},{color:'#FF6B6B',bg:'#FFEAEA'},{color:'#95D5B2',bg:'#E8F8EE'},
+];
+
+const DEFAULT_CATS = [
+  {id:'alimentacion',name:'Alimentación',  icon:'🛒',color:'#FFB347',bg:'#FFF4E0',freq:'semanal', budget:70000},
+  {id:'hogar',       name:'Hogar',         icon:'🏠',color:'#77DD77',bg:'#EDFAED',freq:'mensual', budget:0},
+  {id:'salud',       name:'Salud',         icon:'🏥',color:'#FF6B6B',bg:'#FFEAEA',freq:'mensual', budget:0},
+  {id:'camilo',      name:'Salud Camilo',  icon:'👦',color:'#FF9AA2',bg:'#FFF0F1',freq:'mensual', budget:0},
+  {id:'transporte',  name:'Transporte',    icon:'🚌',color:'#87CEEB',bg:'#EAF6FF',freq:'semanal', budget:0},
+  {id:'deudas',      name:'Deudas',        icon:'💳',color:'#C9A0DC',bg:'#F5EEFF',freq:'mensual', budget:0},
+  {id:'educacion',   name:'Educación',     icon:'📚',color:'#7EC8C8',bg:'#E8FAFA',freq:'mensual', budget:0},
+  {id:'mascota',     name:'Mascota',       icon:'🐕',color:'#F9C74F',bg:'#FDFDE8',freq:'mensual', budget:0},
+  {id:'aseo',        name:'Aseo/Farmacia', icon:'🧴',color:'#B5EAD7',bg:'#EDFAF5',freq:'mensual', budget:0},
+  {id:'ahorro',      name:'Fondo/Ahorro',  icon:'🏦',color:'#AEC6CF',bg:'#EAF3F6',freq:'mensual', budget:0},
+  {id:'otros',       name:'Otros',         icon:'📦',color:'#D4C5F9',bg:'#F5F0FF',freq:'mensual', budget:0},
+];
+
+// ═══════════════════════════════════════════════
+// SESSION & CONFIG
+// ═══════════════════════════════════════════════
+const SESSION_ID = (() => {
+  let s = localStorage.getItem('mf_sid');
+  if (!s) { s = 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2); localStorage.setItem('mf_sid', s); }
+  return s;
+})();
+
+let SB_URL = localStorage.getItem('mf_sb_url') || '';
+let SB_KEY = localStorage.getItem('mf_sb_key') || '';
+let SB_STATUS = 'none'; // 'none' | 'ok' | 'error'
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+const S = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  view: 'home',
+  addExpCat: null,
+  moveFilter: 'all',
+  projForm: false,
+  data: {
+    cats: DEFAULT_CATS.map(c => ({...c})),
+    months: {},
+    projected: []
+  }
+};
+
+// ═══════════════════════════════════════════════
+// DATA ACCESSORS
+// ═══════════════════════════════════════════════
+function mk() { return S.year + '-' + String(S.month + 1).padStart(2,'0'); }
+
+function mdata() {
+  if (!S.data.months[mk()]) S.data.months[mk()] = {income:[], expenses:[]};
+  return S.data.months[mk()];
+}
+
+function getCat(id) {
+  return S.data.cats.find(c => c.id === id) || {icon:'📦',name:'Otro',color:'#D4C5F9',bg:'#F5F0FF',freq:'mensual',budget:0};
+}
+
+function totalIncome()   { return mdata().income.reduce((s,i) => s + i.amount, 0); }
+function totalExpenses() { return mdata().expenses.reduce((s,e) => s + e.amount, 0); }
+
+function catMonthExpenses(catId) {
+  return mdata().expenses.filter(e => e.category === catId).reduce((s,e) => s + e.amount, 0);
+}
+
+function catWeekExpenses(catId) {
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now); mon.setDate(now.getDate() - (day === 0 ? 6 : day - 1)); mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+  const mds = mon.toISOString().split('T')[0];
+  const sds = sun.toISOString().split('T')[0];
+  return mdata().expenses
+    .filter(e => e.category === catId && e.date >= mds && e.date <= sds)
+    .reduce((s,e) => s + e.amount, 0);
+}
+
+// ═══════════════════════════════════════════════
+// PERSISTENCE
+// ═══════════════════════════════════════════════
+function saveLocal() {
+  localStorage.setItem('mf_data', JSON.stringify(S.data));
+}
+
+async function saveSB() {
+  if (!SB_URL || !SB_KEY) return;
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/mf_finanzas', {
+      method: 'POST',
+      headers: {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
+      body: JSON.stringify({session_id: SESSION_ID, data: S.data, updated_at: new Date().toISOString()})
+    });
+    SB_STATUS = r.ok ? 'ok' : 'error';
+  } catch { SB_STATUS = 'error'; }
+}
+
+async function save() {
+  saveLocal();
+  saveSB();
+}
+
+async function loadData() {
+  if (SB_URL && SB_KEY) {
+    try {
+      const r = await fetch(SB_URL + '/rest/v1/mf_finanzas?session_id=eq.' + SESSION_ID + '&select=data', {
+        headers: {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+      });
+      if (r.ok) {
+        const rows = await r.json();
+        if (rows && rows[0] && rows[0].data) {
+          S.data = rows[0].data;
+          saveLocal();
+          SB_STATUS = 'ok';
+          return;
+        }
+      }
+    } catch { SB_STATUS = 'error'; }
+  }
+  const local = localStorage.getItem('mf_data');
+  if (local) { try { S.data = JSON.parse(local); } catch {} }
+}
+
+// ═══════════════════════════════════════════════
+// DOM HELPERS
+// ═══════════════════════════════════════════════
+function el(tag, attrs, children) {
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs || {})) {
+    if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'cn') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else e.setAttribute(k, v);
+  }
+  for (const c of (children || [])) {
+    if (c == null) continue;
+    if (typeof c === 'string' || typeof c === 'number') e.appendChild(document.createTextNode(String(c)));
+    else if (c instanceof Node) e.appendChild(c);
+  }
+  return e;
+}
+const div = (a,c) => el('div',a,c);
+const btn = (a,c) => el('button',a,c);
+const inp = a => el('input',a);
+const sp  = (cn,t) => { const s=document.createElement('span'); s.className=cn; s.textContent=t; return s; };
+const h2e = (a,c) => el('h2',a,c);
+const pe  = (a,c) => el('p',a,c);
+const fmt = n => '$' + Math.abs(Math.round(n)).toLocaleString('es-CL');
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function go(view) {
+  S.view = view;
+  document.querySelectorAll('.ni').forEach(n => n.classList.toggle('active', n.dataset.view === view));
+  render();
+}
+
+// ═══════════════════════════════════════════════
+// MAIN RENDER DISPATCHER
+// ═══════════════════════════════════════════════
+function render() {
+  const c = document.getElementById('content');
+  c.innerHTML = '';
+  ({home:rHome, income:rIncome, expenses:rExpenses, projected:rProjected, settings:rSettings})[S.view]?.(c);
+}
+
+// ═══════════════════════════════════════════════
+// HOME VIEW
+// ═══════════════════════════════════════════════
+function rHome(c) {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+
+  // Month nav
+  const ms = div({cn:'mstrip'});
+  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month--; if(S.month<0){S.month=11;S.year--;} render(); }},['←']));
+  ms.appendChild(el('span',{cn:'mname'},[MONTHS[S.month], ' ', el('span',{cn:'myear'},[String(S.year)])]));
+  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month++; if(S.month>11){S.month=0;S.year++;} render(); }},['→']));
+  root.appendChild(ms);
+
+  // Alerts
+  const cms = mk();
+  const alerts = S.data.projected.filter(p => p.targetMonth === cms && !p.done);
+  if (alerts.length) {
+    const ab = div({cn:'alert-box'});
+    ab.appendChild(el('span',{},[' ⚠️ ']));
+    const ad = div({});
+    ad.appendChild(el('strong',{},['Este mes tenés proyectado:']));
+    alerts.forEach(a => ad.appendChild(div({cn:'al-row'},['· ' + a.name + ' — ' + fmt(a.amount)])));
+    ab.appendChild(ad);
+    root.appendChild(ab);
+  }
+
+  // Hero balance
+  const inc = totalIncome(), exp = totalExpenses(), bal = inc - exp;
+  const hero = div({cn:'hero'});
+  hero.appendChild(div({cn:'hero-eye'},['balance del mes']));
+  hero.appendChild(div({cn:'hero-bal ' + (bal >= 0 ? 'pos':'neg')},[(bal < 0 ? '–':'') + fmt(bal)]));
+  const hr = div({cn:'hero-row'});
+  hr.appendChild(div({cn:'hero-half'},[sp('hh-lbl','↑ Ingresos'),sp('hh-val inc-val',fmt(inc))]));
+  hr.appendChild(div({cn:'hero-div'}));
+  hr.appendChild(div({cn:'hero-half'},[sp('hh-lbl','↓ Gastos'),sp('hh-val exp-val',fmt(exp))]));
+  hero.appendChild(hr);
+
+  // Pusheen cat 🐱
+  const cat = div({cn:'pusheen',html:`<svg viewBox="0 0 78 72" xmlns="http://www.w3.org/2000/svg">
+  <!-- Tail -->
+  <path d="M60 50 C76 42 80 28 68 20 C62 16 57 22 62 27" stroke="#C2C2C2" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M61 48 C74 41 77 30 68 22" stroke="#ABABAB" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-dasharray="4,3.5"/>
+  <!-- Body -->
+  <ellipse cx="35" cy="50" rx="26" ry="20" fill="#D0D0D0"/>
+  <path d="M18 55 Q35 52 52 55" stroke="#B8B8B8" stroke-width="1.6" fill="none"/>
+  <path d="M16 61 Q35 58 54 61" stroke="#B8B8B8" stroke-width="1.6" fill="none"/>
+  <!-- Head -->
+  <circle cx="35" cy="26" r="18" fill="#D0D0D0"/>
+  <!-- Left ear -->
+  <polygon points="19,14 13,2 25,9" fill="#D0D0D0"/>
+  <polygon points="20,13 15,4 24,9" fill="#F2B8CC"/>
+  <!-- Right ear -->
+  <polygon points="51,14 57,2 45,9" fill="#D0D0D0"/>
+  <polygon points="50,13 55,4 46,9" fill="#F2B8CC"/>
+  <!-- Eyes (happy arches) -->
+  <path d="M26,25 Q29,22 32,25" stroke="#555" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M38,25 Q41,22 44,25" stroke="#555" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Nose -->
+  <ellipse cx="35" cy="30" rx="2" ry="1.2" fill="#F0A0B8"/>
+  <!-- Mouth -->
+  <path d="M32,32 Q35,35 38,32" stroke="#999" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- Whiskers L -->
+  <line x1="12" y1="28" x2="26" y2="30" stroke="#AFAFAF" stroke-width=".9"/>
+  <line x1="12" y1="31" x2="26" y2="31" stroke="#AFAFAF" stroke-width=".9"/>
+  <!-- Whiskers R -->
+  <line x1="44" y1="30" x2="58" y2="28" stroke="#AFAFAF" stroke-width=".9"/>
+  <line x1="44" y1="31" x2="58" y2="31" stroke="#AFAFAF" stroke-width=".9"/>
+  <!-- Paws -->
+  <ellipse cx="21" cy="67" rx="9" ry="5.5" fill="#D0D0D0"/>
+  <ellipse cx="46" cy="67" rx="9" ry="5.5" fill="#D0D0D0"/>
+  <!-- Paw lines -->
+  <line x1="17" y1="69" x2="17" y2="71" stroke="#B8B8B8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="21" y1="70" x2="21" y2="72" stroke="#B8B8B8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="25" y1="69" x2="25" y2="71" stroke="#B8B8B8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="42" y1="69" x2="42" y2="71" stroke="#B8B8B8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="46" y1="70" x2="46" y2="72" stroke="#B8B8B8" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="50" y1="69" x2="50" y2="71" stroke="#B8B8B8" stroke-width="1.2" stroke-linecap="round"/>
+</svg>`});
+  hero.appendChild(cat);
+
+  root.appendChild(hero);
+
+  // Categories
+  root.appendChild(h2e({cn:'sec-title'},['Mis categorías']));
+
+  const activeCats = S.data.cats.filter(cat => {
+    const spent = cat.freq === 'semanal' ? catWeekExpenses(cat.id) : catMonthExpenses(cat.id);
+    return spent > 0 || cat.budget > 0;
+  });
+
+  if (!activeCats.length) {
+    root.appendChild(pe({cn:'empty'},['Configurá presupuestos en ⚙️ Ajustes\npara verlos aquí.']));
+  } else {
+    const grid = div({cn:'cgrid'});
+    activeCats.forEach(cat => {
+      const isWeek = cat.freq === 'semanal';
+      const spent = isWeek ? catWeekExpenses(cat.id) : catMonthExpenses(cat.id);
+      const budget = cat.budget || 0;
+      const pct = budget > 0 ? Math.min(100, (spent/budget)*100) : 0;
+      const rem = budget - spent;
+      const over = rem < 0;
+      const warn = !over && pct >= 75;
+      const remCls = over ? 'ct-rem over' : warn ? 'ct-rem warn' : 'ct-rem ok';
+      const tc = cat.color === '#F9C74F' ? '#8A7000' : cat.color;
+
+      const tile = div({cn:'ctile',style:{background:cat.bg,borderColor:cat.color+'66'}});
+      tile.appendChild(div({cn:'ct-top'},[
+        el('span',{cn:'ct-emoji'},[cat.icon]),
+        el('span',{cn:'ct-name'},[cat.name])
+      ]));
+      tile.appendChild(el('span',{cn:'freq-badge ' + (isWeek?'freq-w':'freq-m')},[isWeek?'sem.':'mes.']));
+      tile.appendChild(div({cn:'ct-spent',style:{color:over?'#E05050':tc}},[fmt(spent)]));
+
+      if (budget > 0) {
+        tile.appendChild(div({cn:'ct-sub'},[isWeek?'esta semana':'este mes']));
+        tile.appendChild(div({cn:'ct-track'},[div({cn:'ct-fill',style:{width:pct+'%',background:over?'#E05050':cat.color}})]));
+        tile.appendChild(div({cn:remCls},[over ? '¡Excedido en '+fmt(Math.abs(rem))+'!' : 'Quedan '+fmt(rem)]));
+      }
+      grid.appendChild(tile);
+    });
+    root.appendChild(grid);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// INCOME VIEW
+// ═══════════════════════════════════════════════
+function rIncome(c) {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+
+  root.appendChild(h2e({cn:'page-title'},['Ingresos']));
+
+  // Total this month
+  const total = totalIncome();
+  const tr = div({cn:'total-row'});
+  tr.appendChild(el('span',{},['Total ' + MONTHS[S.month]]));
+  tr.appendChild(el('span',{style:{color:'var(--green-dark)',fontFamily:"'Lora',serif",fontSize:'1.1rem'}},[fmt(total)]));
+  root.appendChild(tr);
+
+  // Add income form
+  const form = div({cn:'',style:{background:'#FFF',border:'2px solid var(--border)',borderRadius:'14px',padding:'1rem',marginBottom:'1rem'}});
+
+  const srcInp = inp({cn:'txt-inp',type:'text',placeholder:'Fuente (ej: Sueldo Eduardo, CicloMate...)',style:{marginBottom:'.7rem'}});
+  form.appendChild(srcInp);
+
+  const amtWrap = div({cn:'amt-wrap',style:{marginBottom:'.7rem'}});
+  amtWrap.appendChild(div({cn:'amt-sign'},['$']));
+  const amtInp = inp({cn:'amt-inp',type:'number',placeholder:'0'});
+  amtWrap.appendChild(amtInp);
+  form.appendChild(amtWrap);
+
+  const today = new Date().toISOString().split('T')[0];
+  const dateInp = inp({cn:'txt-inp',type:'date',value:today});
+
+  const tc = div({cn:'two-col'});
+  tc.appendChild(dateInp);
+  const noteInp = inp({cn:'txt-inp',type:'text',placeholder:'Nota (opcional)'});
+  tc.appendChild(noteInp);
+  form.appendChild(tc);
+
+  const addBtn = btn({cn:'save-btn',style:{marginTop:'.7rem'},onClick:() => {
+    const src = srcInp.value.trim();
+    const amt = Number(amtInp.value);
+    if (!src || !amt) { srcInp.style.borderColor='#FF6B6B'; return; }
+    srcInp.style.borderColor='';
+    mdata().income.push({id:Date.now(), source:src, amount:amt, date:dateInp.value, note:noteInp.value.trim()});
+    save();
+    addBtn.textContent = '✓ Agregado';
+    addBtn.classList.add('ok');
+    setTimeout(() => { srcInp.value=''; amtInp.value=''; noteInp.value=''; addBtn.textContent='Agregar ingreso'; addBtn.classList.remove('ok'); render(); }, 700);
+  }},['Agregar ingreso']);
+  form.appendChild(addBtn);
+  root.appendChild(form);
+
+  // List
+  const list = mdata().income.slice().sort((a,b) => b.date.localeCompare(a.date));
+  if (!list.length) {
+    root.appendChild(pe({cn:'empty'},['No hay ingresos registrados este mes.']));
+    return;
+  }
+
+  const ul = div({cn:'inc-list'});
+  list.forEach(inc => {
+    const card = div({cn:'inc-card'});
+    card.appendChild(el('span',{cn:'card-icon'},['💰']));
+    const info = div({cn:'card-info'});
+    info.appendChild(div({cn:'card-desc'},[inc.source]));
+    info.appendChild(div({cn:'card-meta'},[inc.date + (inc.note ? ' · '+inc.note : '')]));
+    card.appendChild(info);
+    card.appendChild(div({cn:'card-amt',style:{color:'var(--green-dark)'}},['+'+fmt(inc.amount)]));
+    card.appendChild(btn({cn:'del-x',onClick:() => {
+      mdata().income = mdata().income.filter(x => x.id !== inc.id);
+      save(); render();
+    }},['✕']));
+    ul.appendChild(card);
+  });
+  root.appendChild(ul);
+}
+
+// ═══════════════════════════════════════════════
+// EXPENSES VIEW
+// ═══════════════════════════════════════════════
+function rExpenses(c) {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+
+  root.appendChild(h2e({cn:'page-title'},['Registrar gasto']));
+
+  // Category picker
+  root.appendChild(el('label',{cn:'flbl'},['Categoría']));
+  const picker = div({cn:'cat-picker',style:{marginBottom:'1rem'}});
+  let selCat = S.addExpCat || S.data.cats[0].id;
+  const cpBtns = {};
+
+  S.data.cats.forEach(cat => {
+    const b = btn({
+      cn: 'cp-btn' + (selCat === cat.id ? ' on':''),
+      style: selCat === cat.id ? {background:cat.color,borderColor:cat.color} : {borderColor:cat.color+'88'},
+      onClick: () => {
+        selCat = cat.id;
+        S.addExpCat = cat.id;
+        Object.entries(cpBtns).forEach(([id,bb]) => {
+          const cc = getCat(id);
+          if (id === selCat) { bb.className='cp-btn on'; bb.style.background=cc.color; bb.style.borderColor=cc.color; }
+          else { bb.className='cp-btn'; bb.style.background='#FFF'; bb.style.borderColor=cc.color+'88'; }
+        });
+      }
+    },[cat.icon+' '+cat.name]);
+    cpBtns[cat.id] = b;
+    picker.appendChild(b);
+  });
+  root.appendChild(picker);
+
+  // Amount
+  root.appendChild(el('label',{cn:'flbl'},['Monto']));
+  const aw = div({cn:'amt-wrap',style:{marginBottom:'1rem'}});
+  aw.appendChild(div({cn:'amt-sign'},['$']));
+  const amtInp = inp({cn:'amt-inp',type:'number',placeholder:'0'});
+  aw.appendChild(amtInp);
+  root.appendChild(aw);
+
+  // Description
+  const descInp = inp({cn:'txt-inp',type:'text',placeholder:'¿En qué fue?',style:{marginBottom:'1rem'}});
+  root.appendChild(el('label',{cn:'flbl'},['Descripción']));
+  root.appendChild(descInp);
+
+  // Date + Note
+  root.appendChild(el('label',{cn:'flbl'},['Fecha y nota']));
+  const tc = div({cn:'two-col',style:{marginBottom:'1rem'}});
+  const today = new Date().toISOString().split('T')[0];
+  const dateInp = inp({cn:'txt-inp',type:'date',value:today});
+  const noteInp = inp({cn:'txt-inp',type:'text',placeholder:'Nota (opcional)'});
+  tc.appendChild(dateInp); tc.appendChild(noteInp);
+  root.appendChild(tc);
+
+  // Save
+  const saveBtn = btn({cn:'save-btn',onClick:() => {
+    const amt = Number(amtInp.value);
+    const desc = descInp.value.trim();
+    if (!amt || !desc) { amtInp.closest('.amt-wrap').style.borderColor='#FF6B6B'; return; }
+    mdata().expenses.push({id:Date.now(), amount:amt, desc, category:selCat, date:dateInp.value, note:noteInp.value.trim()});
+    save();
+    saveBtn.textContent = '✓ ¡Guardado!';
+    saveBtn.classList.add('ok');
+    setTimeout(() => { amtInp.value=''; descInp.value=''; noteInp.value=''; saveBtn.textContent='Guardar gasto'; saveBtn.classList.remove('ok'); go('home'); }, 800);
+  }},['Guardar gasto']);
+  root.appendChild(saveBtn);
+
+  // Recent expenses this month
+  const exps = mdata().expenses.slice().sort((a,b) => b.date.localeCompare(a.date));
+  if (exps.length) {
+    root.appendChild(h2e({cn:'sec-title',style:{marginTop:'1.5rem'}},['Gastos de '+MONTHS[S.month]]));
+
+    // Filter chips
+    const chips = div({cn:'chip-row'});
+    const filters = [['all','Todos'],...S.data.cats.map(c=>[c.id,c.icon+' '+c.name])];
+    filters.forEach(([id,lbl]) => {
+      const ch = btn({cn:'chip'+(S.moveFilter===id?' on':''),onClick:() => { S.moveFilter=id; render(); }},[lbl]);
+      chips.appendChild(ch);
+    });
+    root.appendChild(chips);
+
+    const filtered = exps.filter(e => S.moveFilter==='all' || e.category===S.moveFilter);
+    if (filtered.length) {
+      const total = filtered.reduce((s,e) => s+e.amount, 0);
+      root.appendChild(div({style:{display:'flex',justifyContent:'space-between',fontSize:'.76rem',fontWeight:'700',color:'var(--muted)',marginBottom:'.7rem'}},[
+        filtered.length+' gasto'+(filtered.length!==1?'s':''),
+        div({style:{color:'var(--red-dark)'}},['–'+fmt(total)])
+      ]));
+    }
+
+    const ul = div({cn:'move-list'});
+    filtered.forEach(exp => {
+      const cat = getCat(exp.category);
+      const card = div({cn:'move-card',style:{borderLeftColor:cat.color}});
+      card.appendChild(el('span',{cn:'card-icon'},[cat.icon]));
+      const info = div({cn:'card-info'});
+      info.appendChild(div({cn:'card-desc'},[exp.desc]));
+      info.appendChild(div({cn:'card-meta'},[cat.name+' · '+exp.date+(exp.note?' · '+exp.note:'')]));
+      card.appendChild(info);
+      card.appendChild(div({cn:'card-amt',style:{color:'var(--red-dark)'}},['–'+fmt(exp.amount)]));
+      card.appendChild(btn({cn:'del-x',onClick:() => {
+        mdata().expenses = mdata().expenses.filter(x => x.id !== exp.id);
+        save(); render();
+      }},['✕']));
+      ul.appendChild(card);
+    });
+    root.appendChild(ul);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PROJECTED VIEW
+// ═══════════════════════════════════════════════
+function rProjected(c) {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+
+  const hdr = div({style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'.5rem'}});
+  hdr.appendChild(h2e({cn:'page-title',style:{margin:'0'}},['Proyectados']));
+  hdr.appendChild(btn({cn:'pill-btn',onClick:() => { S.projForm=!S.projForm; render(); }},[S.projForm?'✕ Cerrar':'+ Nuevo']));
+  root.appendChild(hdr);
+  root.appendChild(pe({cn:'sub',style:{marginBottom:'1rem'}},['Planificá gastos futuros y recibí alerta cuando llegue el mes.']));
+
+  const cms = mk();
+
+  if (S.projForm) {
+    const form = div({cn:'',style:{background:'#FFF',border:'2px solid var(--border)',borderRadius:'14px',padding:'1rem',marginBottom:'1rem'}});
+    const ni = inp({cn:'txt-inp',type:'text',placeholder:'Zapatillas, dentista, crema...',style:{marginBottom:'.7rem'}});
+    form.appendChild(ni);
+    const aw = div({cn:'amt-wrap',style:{marginBottom:'.7rem'}});
+    aw.appendChild(div({cn:'amt-sign'},['$']));
+    const ai = inp({cn:'amt-inp',type:'number',placeholder:'0'});
+    aw.appendChild(ai); form.appendChild(aw);
+
+    let useN = true;
+    const seg = div({cn:'seg'});
+    const sn = btn({cn:'seg-btn on',onClick:() => { useN=true; sn.className='seg-btn on'; sm.className='seg-btn'; nrow.style.display='flex'; mrow.style.display='none'; }},['En N meses']);
+    const sm = btn({cn:'seg-btn',onClick:() => { useN=false; sm.className='seg-btn on'; sn.className='seg-btn'; mrow.style.display='block'; nrow.style.display='none'; }},['Mes exacto']);
+    seg.appendChild(sn); seg.appendChild(sm); form.appendChild(seg);
+
+    const nInp = inp({cn:'txt-inp',type:'number',min:'1',max:'36',value:'2',style:{width:'70px'}});
+    const nrow = div({style:{display:'flex',alignItems:'center',gap:'.6rem',marginBottom:'.7rem'}});
+    nrow.appendChild(nInp); nrow.appendChild(pe({cn:'sub'},['meses desde hoy']));
+    form.appendChild(nrow);
+
+    const mInp = inp({cn:'txt-inp',type:'month',value:cms,style:{display:'none',marginBottom:'.7rem'}});
+    const mrow = div({style:{display:'none'}});
+    mrow.appendChild(mInp); form.appendChild(mrow);
+
+    form.appendChild(btn({cn:'save-btn',onClick:() => {
+      const name=ni.value.trim(); const amt=Number(ai.value);
+      if(!name||!amt) return;
+      let target;
+      if(useN){const d=new Date();d.setMonth(d.getMonth()+Number(nInp.value));target=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+      else target=mInp.value;
+      S.data.projected.push({id:Date.now(),name,amount:amt,targetMonth:target,done:false});
+      save(); S.projForm=false; render();
+    }},['Agregar']));
+    root.appendChild(form);
+  }
+
+  const sorted = S.data.projected.slice().sort((a,b) => a.targetMonth.localeCompare(b.targetMonth));
+  if (!sorted.length) root.appendChild(pe({cn:'empty'},['Nada proyectado aún.']));
+
+  sorted.forEach(p => {
+    const isNow=p.targetMonth===cms, isPast=p.targetMonth<cms;
+    let tagCn,tagTxt;
+    if(p.done){tagCn='done';tagTxt='✓ Ejecutado';}
+    else if(isNow){tagCn='now';tagTxt='⚠️ Este mes';}
+    else if(!isPast){tagCn='future';tagTxt='📅 '+p.targetMonth;}
+    else{tagCn='done';tagTxt='Pasado';}
+    const card=div({cn:'proj-card'+(p.done?' past':isNow?' now':'')});
+    card.appendChild(div({cn:'proj-top'},[
+      el('span',{style:{fontSize:'.9rem',fontWeight:'700',textDecoration:p.done?'line-through':'none'}},[p.name]),
+      el('span',{style:{fontFamily:"'Lora',serif",fontWeight:'700'}},[fmt(p.amount)])
+    ]));
+    card.appendChild(div({cn:'ptag '+tagCn},[tagTxt]));
+    card.appendChild(div({cn:'proj-btns'},[
+      btn({cn:'pb g',onClick:() => { S.data.projected=S.data.projected.map(x=>x.id===p.id?{...x,done:!x.done}:x); save();render(); }},[p.done?'↩ Deshacer':'✓ Hecho']),
+      btn({cn:'pb r',onClick:() => { S.data.projected=S.data.projected.filter(x=>x.id!==p.id); save();render(); }},['🗑 Eliminar'])
+    ]));
+    root.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// SETTINGS VIEW
+// ═══════════════════════════════════════════════
+function rSettings(c) {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+  root.appendChild(h2e({cn:'page-title'},['Ajustes']));
+
+  // ── Supabase config ──
+  const sbSec = div({cn:'set-sec'});
+  sbSec.appendChild(div({cn:'set-sec-title'},['☁️ Base de datos (Supabase)']));
+
+  const dotColor = SB_STATUS==='ok'?'status-ok':SB_STATUS==='error'?'status-err':'status-none';
+  const dotLbl = SB_STATUS==='ok'?'Conectado':SB_STATUS==='error'?'Error de conexión':'No configurado';
+  sbSec.appendChild(div({style:{fontSize:'.78rem',fontWeight:'700',marginBottom:'.8rem',color:'var(--muted)'}},
+    [el('span',{cn:'status-dot '+dotColor}), dotLbl]));
+
+  const urlInp = inp({cn:'sb-input',type:'url',placeholder:'https://xxxx.supabase.co',value:SB_URL});
+  const keyInp = inp({cn:'sb-input',type:'password',placeholder:'anon public key',value:SB_KEY});
+  sbSec.appendChild(div({cn:'sub',style:{marginBottom:'.5rem'}},['Pegá tu URL y clave anon de Supabase:']));
+  sbSec.appendChild(urlInp);
+  sbSec.appendChild(keyInp);
+
+  const saveDbBtn = btn({cn:'save-btn sb',style:{marginBottom:'.7rem'},onClick:async () => {
+    SB_URL = urlInp.value.trim();
+    SB_KEY = keyInp.value.trim();
+    localStorage.setItem('mf_sb_url', SB_URL);
+    localStorage.setItem('mf_sb_key', SB_KEY);
+    saveDbBtn.textContent = '⏳ Probando...';
+    await saveSB();
+    saveDbBtn.textContent = SB_STATUS==='ok' ? '✓ Conectado' : '✗ Error';
+    setTimeout(() => { saveDbBtn.textContent='Guardar y conectar'; render(); }, 1500);
+  }},['Guardar y conectar']);
+  sbSec.appendChild(saveDbBtn);
+
+  // SQL instructions
+  const sqlToggle = btn({cn:'ghost-btn',style:{width:'100%',marginBottom:'.5rem'}},['📋 Ver SQL para configurar Supabase']);
+  const sqlBox = div({style:{display:'none'}});
+  sqlToggle.addEventListener('click', () => {
+    sqlBox.style.display = sqlBox.style.display==='none' ? 'block':'none';
+    sqlToggle.textContent = sqlBox.style.display==='none' ? '📋 Ver SQL para configurar Supabase':'▲ Ocultar SQL';
+  });
+  sqlBox.appendChild(pe({cn:'sub',style:{marginBottom:'.4rem'}},['1. Andá a supabase.com → tu proyecto → SQL Editor → New query']));
+  sqlBox.appendChild(pe({cn:'sub',style:{marginBottom:'.4rem'}},['2. Pegá esto y hacé clic en Run:']));
+  sqlBox.appendChild(div({cn:'sql-box',html:
+`create table if not exists mf_finanzas (
+  session_id text primary key,
+  data jsonb not null default '{}',
+  updated_at timestamptz default now()
+);
+alter table mf_finanzas enable row level security;
+create policy "allow_all" on mf_finanzas
+  for all using (true) with check (true);`}));
+  sqlBox.appendChild(pe({cn:'sub',style:{marginBottom:'.4rem'}},['3. Copiá la URL del proyecto y la clave "anon public" desde Settings → API']));
+  sbSec.appendChild(sqlToggle);
+  sbSec.appendChild(sqlBox);
+  sbSec.appendChild(div({cn:'sub',style:{marginTop:'.5rem',padding:'.6rem',background:'#F0E6FF',borderRadius:'8px'}},
+    ['🔑 Tu ID de sesión: ', el('span',{style:{fontFamily:'monospace',fontSize:'.7rem',wordBreak:'break-all'}},[SESSION_ID])]));
+  root.appendChild(sbSec);
+
+  // ── Categories ──
+  const catSec = div({cn:'set-sec'});
+  catSec.appendChild(div({cn:'set-sec-title'},['📂 Categorías']));
+  catSec.appendChild(pe({cn:'sub',style:{marginBottom:'.8rem'}},['Editá nombre, emoji, frecuencia y presupuesto de cada categoría.']));
+
+  S.data.cats.forEach((cat, i) => {
+    const row = div({cn:'cat-set-row',style:{borderLeftColor:cat.color}});
+    row.appendChild(div({cn:'',style:{width:'8px',height:'8px',borderRadius:'50%',background:cat.color,flexShrink:'0'}}));
+
+    const eInp = inp({cn:'emoji-inp',value:cat.icon,maxlength:'2',style:{background:cat.bg}});
+    eInp.addEventListener('input', e => { S.data.cats[i].icon=e.target.value; });
+    row.appendChild(eInp);
+
+    const nInp = inp({cn:'name-inp',type:'text',value:cat.name,placeholder:'Nombre'});
+    nInp.addEventListener('input', e => { S.data.cats[i].name=e.target.value; });
+    row.appendChild(nInp);
+
+    // Freq toggle
+    const fseg = div({cn:'seg',style:{flex:'0 0 auto',width:'110px',marginLeft:'.3rem'}});
+    const fw = btn({cn:'seg-btn'+(cat.freq==='semanal'?' on':''),style:{fontSize:'.65rem',padding:'.3rem'},onClick:() => { S.data.cats[i].freq='semanal'; fw.className='seg-btn on'; fm.className='seg-btn'; }},['📅Sem']);
+    const fm = btn({cn:'seg-btn'+(cat.freq==='mensual'?' on':''),style:{fontSize:'.65rem',padding:'.3rem'},onClick:() => { S.data.cats[i].freq='mensual'; fm.className='seg-btn on'; fw.className='seg-btn'; }},['📆Mes']);
+    fseg.appendChild(fw); fseg.appendChild(fm); row.appendChild(fseg);
+
+    // Budget input
+    const bInp = inp({cn:'bud-inp',type:'number',placeholder:'$0',value:cat.budget||''});
+    bInp.addEventListener('input', e => { S.data.cats[i].budget=Number(e.target.value); });
+    row.appendChild(bInp);
+
+    catSec.appendChild(row);
+  });
+
+  // Add category
+  catSec.appendChild(btn({cn:'ghost-btn',style:{width:'100%',marginTop:'.5rem',marginBottom:'.5rem'},onClick:() => {
+    const palette = CAT_PALETTES[S.data.cats.length % CAT_PALETTES.length];
+    S.data.cats.push({id:'cat_'+Date.now(),name:'Nueva',icon:'✨',color:palette.color,bg:palette.bg,freq:'mensual',budget:0});
+    render();
+  }},['+ Agregar categoría']));
+
+  root.appendChild(catSec);
+
+  // Save button
+  const saveCatBtn = btn({cn:'save-btn',onClick:() => {
+    save();
+    saveCatBtn.textContent='✓ ¡Guardado!';
+    saveCatBtn.classList.add('ok');
+    setTimeout(()=>{ saveCatBtn.textContent='Guardar cambios'; saveCatBtn.classList.remove('ok'); },1500);
+  }},['Guardar cambios']);
+  root.appendChild(saveCatBtn);
+
+  // Export/Import
+  const expSec = div({cn:'set-sec',style:{marginTop:'1.4rem'}});
+  expSec.appendChild(div({cn:'set-sec-title'},['💾 Respaldo']));
+  const btnRow = div({style:{display:'flex',gap:'.7rem'}});
+
+  btnRow.appendChild(btn({cn:'ghost-btn',style:{flex:'1'},onClick:() => {
+    const blob=new Blob([JSON.stringify(S.data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='mis_finanzas_backup.json'; a.click();
+    URL.revokeObjectURL(url);
+  }},['📤 Exportar JSON']));
+
+  const fileInp = inp({type:'file',accept:'.json',style:{display:'none'}});
+  fileInp.addEventListener('change', async e => {
+    const file=e.target.files[0]; if(!file)return;
+    const text=await file.text();
+    try { S.data=JSON.parse(text); save(); alert('✓ Datos importados correctamente'); render(); }
+    catch { alert('Error: el archivo no es válido'); }
+  });
+  btnRow.appendChild(btn({cn:'ghost-btn',style:{flex:'1'},onClick:()=>fileInp.click()},[fileInp,'📥 Importar JSON']));
+  expSec.appendChild(btnRow);
+  root.appendChild(expSec);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+(async () => {
+  await loadData();
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.querySelectorAll('.ni').forEach(n => {
+    n.addEventListener('click', () => go(n.dataset.view));
+  });
+  render();
+})();
+</script>
+</body>
+</html>
