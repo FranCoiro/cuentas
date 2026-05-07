@@ -179,6 +179,9 @@ input{outline:none}
 .emoji-picker{position:absolute;z-index:200;background:#FFF;border:2px solid var(--border);border-radius:14px;padding:.6rem;box-shadow:0 8px 24px rgba(180,127,222,.2);display:grid;grid-template-columns:repeat(8,1fr);gap:2px;width:260px;max-height:200px;overflow-y:auto}
 .emoji-picker button{font-size:1.2rem;padding:.3rem;border-radius:7px;border:none;background:none;cursor:pointer;line-height:1}
 .emoji-picker button:hover{background:var(--purple-light)}
+.miguel-card{background:linear-gradient(135deg,#FFF0F1,#FFE8EA);border:2px solid #FF9AA266;border-radius:14px;padding:.9rem 1.1rem;margin-bottom:1rem}
+.miguel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.miguel-tag{display:inline-block;background:#FF9AA2;color:#FFF;font-size:.6rem;font-weight:800;padding:.1rem .45rem;border-radius:8px;letter-spacing:.3px;text-transform:uppercase;margin-left:.4rem;vertical-align:middle}
 .fondo-card{background:#FFF;border-radius:14px;padding:1rem 1.1rem;border:2px solid var(--border);margin-bottom:.6rem;cursor:pointer;transition:all .2s}
 .fondo-card:hover{border-color:var(--purple);box-shadow:0 4px 12px rgba(180,127,222,.15)}
 .fondo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
@@ -555,6 +558,76 @@ function rHome(c) {
 
   root.appendChild(hero);
 
+  // Pending fixed expenses alert
+  const pendingFixed = (S.data.fixed||[]).filter(f=>!f['paid_'+mk()]);
+  if(pendingFixed.length){
+    const pf = document.createElement('div');
+    pf.style.cssText='background:#FFF4E0;border:2px solid #FFB34766;border-radius:14px;padding:.85rem 1rem;margin-bottom:1rem;cursor:pointer';
+    const pfHdr = document.createElement('div');
+    pfHdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem';
+    const pfTitle = document.createElement('span');
+    pfTitle.style.cssText='font-size:.8rem;font-weight:800;color:#A07030';
+    pfTitle.textContent='📌 Fijos pendientes de pago';
+    const pfTotal = document.createElement('span');
+    pfTotal.style.cssText="font-family:'Lora',serif;font-size:1rem;font-weight:700;color:#A07030";
+    pfTotal.textContent=fmt(pendingFixed.reduce((s,f)=>s+f.amount,0));
+    pfHdr.appendChild(pfTitle); pfHdr.appendChild(pfTotal);
+    pf.appendChild(pfHdr);
+    const pfList = document.createElement('div'); pfList.style.display='none';
+    pendingFixed.forEach(f=>{
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;justify-content:space-between;font-size:.78rem;padding:.2rem 0;border-bottom:1px solid rgba(255,179,71,.2);font-weight:600;color:#7A5A20';
+      const ln=document.createElement('span'); ln.textContent=f.icon+' '+f.name;
+      const la=document.createElement('span'); la.textContent=fmt(f.amount);
+      row.appendChild(ln); row.appendChild(la); pfList.appendChild(row);
+    });
+    pf.appendChild(pfList);
+    pf.addEventListener('click',()=>{ pfList.style.display=pfList.style.display==='none'?'block':'none'; });
+    const pfHint=document.createElement('div'); pfHint.style.cssText='font-size:.63rem;color:#C09040;margin-top:.3rem;font-weight:600';
+    pfHint.textContent='Click para ver detalle · Ir a 📌 Fijos para marcar pagados';
+    pf.appendChild(pfHint);
+    root.appendChild(pf);
+  }
+
+  // Miguel Santiago summary — based on category
+  const miguelCat = S.data.cats.find(c=>c.name.toLowerCase().includes('miguel'));
+  const miguelExps = miguelCat ? mdata().expenses.filter(e=>e.category===miguelCat.id) : [];
+  if(miguelExps.length){
+    const migTotal = miguelExps.reduce((s,e)=>s+e.amount,0);
+    const migCard = div({cn:'miguel-card'});
+    const migHdr = div({cn:'miguel-header'});
+    const migTitle = document.createElement('span');
+    migTitle.style.cssText='font-size:.88rem;font-weight:800;color:#A03050';
+    migTitle.innerHTML='👦 Miguel Santiago <span class="miguel-tag">sub-cuenta</span>';
+    const migAmt = document.createElement('span');
+    migAmt.style.cssText="font-family:'Lora',serif;font-size:1.2rem;font-weight:700;color:#A03050";
+    migAmt.textContent='–'+fmt(migTotal);
+    migHdr.appendChild(migTitle); migHdr.appendChild(migAmt);
+    migCard.appendChild(migHdr);
+
+    // List of miguel expenses
+    const migList = document.createElement('div'); migList.style.display='none';
+    miguelExps.slice().sort((a,b)=>b.date.localeCompare(a.date)).forEach(exp=>{
+      const cat = getCat(exp.category);
+      const row = document.createElement('div');
+      row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:.25rem 0;border-bottom:1px solid rgba(255,154,162,.2);font-size:.78rem';
+      const ld=document.createElement('span'); ld.style.cssText='flex:1;font-weight:600;color:var(--text)'; ld.textContent=cat.icon+' '+exp.desc;
+      const rd=document.createElement('span'); rd.style.cssText='color:#A03030;font-weight:700;font-family:"Lora",serif;white-space:nowrap;margin-left:.5rem'; rd.textContent='–'+fmt(exp.amount);
+      row.appendChild(ld); row.appendChild(rd);
+      migList.appendChild(row);
+    });
+    migCard.appendChild(migList);
+    migCard.style.cursor='pointer';
+    migCard.addEventListener('click',()=>{
+      migList.style.display = migList.style.display==='none'?'block':'none';
+    });
+    const migHint = document.createElement('div');
+    migHint.style.cssText='font-size:.65rem;color:#C07080;margin-top:.3rem;font-weight:600';
+    migHint.textContent='Click para ver detalle ↕';
+    migCard.appendChild(migHint);
+    root.appendChild(migCard);
+  }
+
   // Categories
   root.appendChild(h2e({cn:'sec-title'},['Mis categorías']));
 
@@ -766,12 +839,14 @@ function rExpenses(c) {
 
   // Date + Note
   root.appendChild(el('label',{cn:'flbl'},['Fecha y nota']));
-  const tc = div({cn:'two-col',style:{marginBottom:'1rem'}});
+  const tc = div({cn:'two-col',style:{marginBottom:'.7rem'}});
   const today = new Date().toISOString().split('T')[0];
   const dateInp = inp({cn:'txt-inp',type:'date',value:today});
   const noteInp = inp({cn:'txt-inp',type:'text',placeholder:'Nota (opcional)'});
   tc.appendChild(dateInp); tc.appendChild(noteInp);
   root.appendChild(tc);
+
+
 
   // Save
   const saveBtn = btn({cn:'save-btn',onClick:() => {
@@ -866,8 +941,14 @@ function rFixed(c) {
     root.appendChild(sumRow);
   }
 
-  // Fixed items list
-  S.data.fixed.forEach((f, i) => {
+  // Fixed items list — unpaid first, paid at bottom
+  const fixedSorted = S.data.fixed.map((f,i)=>({...f,_i:i})).sort((a,b)=>{
+    const pa=!!a[paidKey], pb=!!b[paidKey];
+    if(pa===pb) return 0;
+    return pa?1:-1;
+  });
+  fixedSorted.forEach((f) => {
+    const i = f._i;
     const paid = !!f[paidKey];
     const card = div({cn:'fixed-card'+(paid?' paid':'')});
 
@@ -1495,7 +1576,11 @@ function rFondos(c) {
     const aportesTotal = (f.aportes||[]).reduce((s,a)=>s+a.amount,0);
     const retirosTotal = (f.retiros||[]).reduce((s,r)=>s+r.amount,0);
     const saldo = aportesTotal - retirosTotal;
-    const pct = f.meta>0 ? Math.min(100,(saldo/f.meta)*100) : 0;
+    // For fondo proyectados: auto-calculate meta from pending projected
+    const isProyFondo = f.id==='f1'||f.name.toLowerCase().includes('proyectado');
+    const projMeta = isProyFondo ? S.data.projected.filter(p=>!p.done).reduce((s,p)=>s+p.amount,0) : 0;
+    const effectiveMeta = isProyFondo ? projMeta : f.meta;
+    const pct = effectiveMeta>0 ? Math.min(100,(saldo/effectiveMeta)*100) : 0;
 
     const card = div({cn:'fondo-card'});
 
@@ -1506,13 +1591,34 @@ function rFondos(c) {
     hdr.appendChild(nm); hdr.appendChild(tot);
     card.appendChild(hdr);
 
-    // Meta
-    if(f.meta>0){
+    // Meta / progress
+    if(effectiveMeta>0){
+      const falta = effectiveMeta - saldo;
       const mp = document.createElement('div'); mp.className='fondo-meta';
-      mp.textContent='Meta: '+fmt(f.meta)+' · '+Math.round(pct)+'% alcanzado';
+      if(isProyFondo){
+        mp.textContent='Total proyectado pendiente: '+fmt(projMeta);
+      } else {
+        mp.textContent='Meta: '+fmt(effectiveMeta);
+      }
       card.appendChild(mp);
       const track = div({cn:'fondo-track'},[div({cn:'fondo-fill',style:{width:pct+'%',background:f.color}})]);
       card.appendChild(track);
+      // Progress detail
+      const progRow = document.createElement('div');
+      progRow.style.cssText='display:flex;justify-content:space-between;font-size:.7rem;font-weight:700;margin-top:.2rem';
+      const pLeft = document.createElement('span');
+      pLeft.style.color=f.color;
+      pLeft.textContent=Math.round(pct)+'% cubierto · '+fmt(saldo)+' ahorrado';
+      const pRight = document.createElement('span');
+      pRight.style.color = falta<=0 ? '#2A7050' : '#A03030';
+      pRight.textContent = falta<=0 ? '✓ ¡Meta cubierta!' : 'Falta '+fmt(falta);
+      progRow.appendChild(pLeft); progRow.appendChild(pRight);
+      card.appendChild(progRow);
+    } else if(saldo>0) {
+      // No meta but has balance - show simple info
+      const mp = document.createElement('div'); mp.className='fondo-meta';
+      mp.textContent='Sin meta definida · '+fmt(saldo)+' acumulado';
+      card.appendChild(mp);
     }
 
     // History toggle
