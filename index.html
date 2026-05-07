@@ -523,9 +523,15 @@ function rHome(c) {
     const startDay = refCat.weekStart||'Lunes';
     // Apply offset
     const refDate = new Date(today2); refDate.setDate(today2.getDate() + weekOffset*7);
-    const wn = getCurrentWeekNum(startDay); // always show week number based on today for label
-    const wkey = getWeekKey(startDay);
     const weekStartDate = getWeekStartDate(refDate, startDay);
+    // Calculate week number based on refDate
+    const firstOfMonth = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
+    let cursor = getWeekStartDate(firstOfMonth, startDay);
+    if(cursor.getMonth() < refDate.getMonth() || cursor.getFullYear() < refDate.getFullYear()) cursor.setDate(cursor.getDate()+7);
+    let wn = 1;
+    const wsTime = weekStartDate.getTime();
+    while(cursor.getTime() < wsTime){ cursor.setDate(cursor.getDate()+7); wn++; }
+    const wkey = refDate.getFullYear()+'-'+String(refDate.getMonth()+1).padStart(2,'0')+'-W'+wn;
     const weekEndDate = new Date(weekStartDate); weekEndDate.setDate(weekStartDate.getDate()+6);
     const wds = weekStartDate.toISOString().split('T')[0];
     const wde = weekEndDate.toISOString().split('T')[0];
@@ -1369,13 +1375,32 @@ function rFixed(c) {
   const paidAmt    = S.data.fixed.filter(f=>f[paidKey]).reduce((s,f) => s+f.amount, 0);
   const totalSubs  = subItemsList.reduce((s,si)=>s+si.amount,0);
   const paidSubsAmt= subItemsList.filter(si=>si.paid).reduce((s,si)=>s+si.amount,0);
-  const pendAmt    = (totalFixed - paidAmt) + (totalSubs - paidSubsAmt);
+  const pendFijos  = totalFixed - paidAmt;
+  const pendSubs   = totalSubs - paidSubsAmt;
+
+  // Summary for sub-items
+  if(subItemsList.length){
+    const subsSum=div({style:{display:'flex',gap:'.5rem',marginBottom:'1rem'}});
+    [['📋 Total compromisos',totalSubs,'#F5EEFF','#8B5BAE'],
+     ['✓ Pagado',paidSubsAmt,'#E8F8EE','#2A7050'],
+     ['⏳ Pendiente',pendSubs,'#FFF4E0','#D35400']
+    ].forEach(([lbl,val,bg,col])=>{
+      const c=div({style:{flex:'1',background:bg,borderRadius:'10px',padding:'.6rem .8rem',textAlign:'center'}});
+      const l=document.createElement('div'); l.style.cssText='font-size:.58rem;font-weight:800;color:'+col+';text-transform:uppercase;letter-spacing:.4px'; l.textContent=lbl;
+      const v=document.createElement('div'); v.style.cssText="font-family:'Lora',serif;font-size:.95rem;font-weight:700;color:"+col; v.textContent=fmt(val);
+      c.appendChild(l); c.appendChild(v); subsSum.appendChild(c);
+    });
+    // Insert after the sub-items header - we'll append it now and move later
+    root.insertBefore(subsSum, siDivider);
+  }
+
+  const pendAmt = pendFijos; // for backward compat
 
   if (S.data.fixed.length) {
     const sumRow = div({style:{display:'flex',gap:'.5rem',marginBottom:'1rem'}});
-    [[' Total mensual',totalFixed,'#F5EEFF','#8B5BAE'],
+    [[' Total fijos',totalFixed,'#F5EEFF','#8B5BAE'],
      ['✓ Pagado',paidAmt,'#E8F8EE','#2A7050'],
-     ['⏳ Pendiente',pendAmt,'#FFF4E0','#D35400']
+     ['⏳ Pendiente',pendFijos,'#FFF4E0','#D35400']
     ].forEach(([lbl,val,bg,col]) => {
       const card = div({style:{flex:'1',background:bg,borderRadius:'10px',padding:'.6rem .8rem',textAlign:'center'}});
       const l = document.createElement('div');
