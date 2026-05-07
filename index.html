@@ -1284,30 +1284,6 @@ function rFixed(c) {
   const paidKey = 'paid_' + cms;
 
   // Summary totals
-  const totalFixed = S.data.fixed.reduce((s,f) => s+f.amount, 0);
-  const paidAmt    = S.data.fixed.filter(f=>f[paidKey]).reduce((s,f) => s+f.amount, 0);
-  const totalSubs  = subItemsList.reduce((s,si)=>s+si.amount,0);
-  const paidSubsAmt= subItemsList.filter(si=>si.paid).reduce((s,si)=>s+si.amount,0);
-  const pendAmt    = (totalFixed - paidAmt) + (totalSubs - paidSubsAmt);
-
-  if (S.data.fixed.length) {
-    const sumRow = div({style:{display:'flex',gap:'.5rem',marginBottom:'1rem'}});
-    [[' Total mensual',totalFixed,'#F5EEFF','#8B5BAE'],
-     ['✓ Pagado',paidAmt,'#E8F8EE','#2A7050'],
-     ['⏳ Pendiente',pendAmt,'#FFF4E0','#D35400']
-    ].forEach(([lbl,val,bg,col]) => {
-      const card = div({style:{flex:'1',background:bg,borderRadius:'10px',padding:'.6rem .8rem',textAlign:'center'}});
-      const l = document.createElement('div');
-      l.style.cssText = 'font-size:.62rem;font-weight:800;color:'+col+';text-transform:uppercase;letter-spacing:.5px';
-      l.textContent = lbl;
-      const v = document.createElement('div');
-      v.style.cssText = "font-family:'Lora',serif;font-size:1rem;font-weight:700;color:"+col;
-      v.textContent = fmt(val);
-      card.appendChild(l); card.appendChild(v);
-      sumRow.appendChild(card);
-    });
-    root.appendChild(sumRow);
-  }
 
   // Build combined list: fixed expenses + sub-items
   if(!mdata().paidSubs) mdata().paidSubs={};
@@ -1364,6 +1340,32 @@ function rFixed(c) {
   const siHdr2=document.createElement('div'); siHdr2.style.cssText='font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:.5rem';
   siHdr2.textContent='📌 Gastos fijos recurrentes';
   root.appendChild(siHdr2);
+
+
+    const totalFixed = S.data.fixed.reduce((s,f) => s+f.amount, 0);
+  const paidAmt    = S.data.fixed.filter(f=>f[paidKey]).reduce((s,f) => s+f.amount, 0);
+  const totalSubs  = subItemsList.reduce((s,si)=>s+si.amount,0);
+  const paidSubsAmt= subItemsList.filter(si=>si.paid).reduce((s,si)=>s+si.amount,0);
+  const pendAmt    = (totalFixed - paidAmt) + (totalSubs - paidSubsAmt);
+
+  if (S.data.fixed.length) {
+    const sumRow = div({style:{display:'flex',gap:'.5rem',marginBottom:'1rem'}});
+    [[' Total mensual',totalFixed,'#F5EEFF','#8B5BAE'],
+     ['✓ Pagado',paidAmt,'#E8F8EE','#2A7050'],
+     ['⏳ Pendiente',pendAmt,'#FFF4E0','#D35400']
+    ].forEach(([lbl,val,bg,col]) => {
+      const card = div({style:{flex:'1',background:bg,borderRadius:'10px',padding:'.6rem .8rem',textAlign:'center'}});
+      const l = document.createElement('div');
+      l.style.cssText = 'font-size:.62rem;font-weight:800;color:'+col+';text-transform:uppercase;letter-spacing:.5px';
+      l.textContent = lbl;
+      const v = document.createElement('div');
+      v.style.cssText = "font-family:'Lora',serif;font-size:1rem;font-weight:700;color:"+col;
+      v.textContent = fmt(val);
+      card.appendChild(l); card.appendChild(v);
+      sumRow.appendChild(card);
+    });
+    root.appendChild(sumRow);
+  }
 
   // Fixed items list — unpaid first, paid at bottom
   const fixedSorted = S.data.fixed.map((f,i)=>({...f,_i:i})).sort((a,b)=>{
