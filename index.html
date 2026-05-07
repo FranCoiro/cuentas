@@ -466,7 +466,9 @@ function rHome(c) {
   // Hero balance
   const inc = totalIncome(), exp = totalExpenses();
   const paidFixed = (S.data.fixed||[]).filter(f=>f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
-  const bal = inc - exp - paidFixed;
+  const fondosMes = (S.data.fondos||[]).reduce((s,f)=>
+    s+(f.aportes||[]).filter(a=>a.date&&a.date.slice(0,7)===mk()).reduce((a2,ap)=>a2+ap.amount,0),0);
+  const bal = inc - exp - paidFixed - fondosMes;
   const totalFixed = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
   const hero = div({cn:'hero'});
   hero.appendChild(div({cn:'hero-eye'},['balance del mes']));
@@ -478,6 +480,11 @@ function rHome(c) {
   if(paidFixed>0){
     hr.appendChild(div({cn:'hero-div'}));
     hr.appendChild(div({cn:'hero-half'},[sp('hh-lbl','📌 Fijos pagados'),sp('hh-val exp-val',fmt(paidFixed))]));
+  }
+  if(fondosMes>0){
+    hr.appendChild(div({cn:'hero-div'}));
+    const fv = sp('hh-val',''); fv.style.color='#2A7050'; fv.textContent=fmt(fondosMes);
+    hr.appendChild(div({cn:'hero-half'},[sp('hh-lbl','🏦 Aportado a fondos'),fv]));
   }
   hero.appendChild(hr);
 
@@ -584,6 +591,50 @@ function rHome(c) {
         tile.appendChild(div({cn:'ct-track'},[div({cn:'ct-fill',style:{width:pct+'%',background:over?'#E05050':cat.color}})]));
         tile.appendChild(div({cn:remCls},[over ? '¡Excedido en '+fmt(Math.abs(rem))+'!' : 'Quedan '+fmt(rem)]));
       }
+      // Click to expand expenses
+      const detail = document.createElement('div');
+      detail.style.cssText='display:none;margin-top:.6rem;border-top:1.5px solid rgba(0,0,0,.08);padding-top:.5rem';
+
+      tile.style.cursor='pointer';
+      tile.addEventListener('click',()=>{
+        const isOpen = detail.style.display!=='none';
+        // Close all others
+        root.querySelectorAll('.cat-detail').forEach(d=>d.style.display='none');
+        root.querySelectorAll('.ctile').forEach(t=>t.style.boxShadow='');
+        if(!isOpen){
+          detail.style.display='block';
+          tile.style.boxShadow='0 4px 16px rgba(0,0,0,.12)';
+        }
+      });
+
+      detail.className='cat-detail';
+      const isWeekD = cat.freq==='semanal';
+      const exps = mdata().expenses.filter(e=>{
+        if(e.category!==cat.id) return false;
+        if(!isWeekD) return true;
+        const now2=new Date(); const day2=now2.getDay();
+        const mon2=new Date(now2); mon2.setDate(now2.getDate()-(day2===0?6:day2-1)); mon2.setHours(0,0,0,0);
+        const mds2=mon2.toISOString().split('T')[0];
+        const sun2=new Date(mon2); sun2.setDate(mon2.getDate()+6);
+        const sds2=sun2.toISOString().split('T')[0];
+        return e.date>=mds2&&e.date<=sds2;
+      }).sort((a,b)=>b.date.localeCompare(a.date));
+
+      if(!exps.length){
+        const em=document.createElement('p'); em.style.cssText='font-size:.75rem;color:#B0A0C0;text-align:center;padding:.3rem 0'; em.textContent='Sin gastos '+(isWeekD?'esta semana':'este mes');
+        detail.appendChild(em);
+      } else {
+        exps.forEach(exp=>{
+          const row=document.createElement('div');
+          row.style.cssText='display:flex;justify-content:space-between;align-items:center;padding:.25rem 0;border-bottom:1px solid rgba(0,0,0,.05);font-size:.78rem';
+          const ld=document.createElement('span'); ld.style.cssText='color:var(--text);font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'; ld.textContent=exp.desc;
+          const rd=document.createElement('span'); rd.style.cssText='color:#A03030;font-weight:700;margin-left:.5rem;white-space:nowrap;font-family:"Lora",serif'; rd.textContent='–'+fmt(exp.amount);
+          const dt=document.createElement('span'); dt.style.cssText='color:var(--muted);font-size:.65rem;margin-left:.4rem;white-space:nowrap'; dt.textContent=exp.date.slice(5);
+          row.appendChild(ld); row.appendChild(dt); row.appendChild(rd);
+          detail.appendChild(row);
+        });
+      }
+      tile.appendChild(detail);
       grid.appendChild(tile);
     });
     root.appendChild(grid);
@@ -826,8 +877,22 @@ function rFixed(c) {
     info.appendChild(nm);
     card.appendChild(info);
 
-    const amt = document.createElement('div'); amt.className='fc-amt'; amt.textContent=fmt(f.amount);
-    card.appendChild(amt);
+
+
+    // Editable amount
+    const amtWrapF = document.createElement('div');
+    amtWrapF.style.cssText='display:flex;align-items:center;gap:4px;margin-right:.3rem';
+    const amtEditF = document.createElement('input');
+    amtEditF.type='number'; amtEditF.value=f.amount;
+    amtEditF.style.cssText="width:90px;border:2px solid var(--border);border-radius:8px;padding:.3rem .5rem;font-family:'Lora',serif;font-weight:700;font-size:.88rem;color:var(--text);background:#FBF5FF;text-align:right";
+    amtEditF.addEventListener('change',e=>{
+      const v=Number(e.target.value); if(!v) return;
+      S.data.fixed[i].amount=v; save();
+    });
+    amtEditF.addEventListener('focus',()=>amtEditF.style.borderColor='var(--purple)');
+    amtEditF.addEventListener('blur',()=>amtEditF.style.borderColor='var(--border)');
+    amtWrapF.appendChild(amtEditF);
+    card.appendChild(amtWrapF);
 
     const pb = document.createElement('button');
     pb.className = 'pay-btn '+(paid?'paid':'unpaid');
@@ -1318,6 +1383,57 @@ function rProjected(c) {
   }
 
   const sorted=S.data.projected.slice().sort((a,b)=>a.targetMonth.localeCompare(b.targetMonth));
+
+  // Total pendiente con perrito
+  const totalPend = S.data.projected.filter(p=>!p.done).reduce((s,p)=>s+p.amount,0);
+  const totalHecho = S.data.projected.filter(p=>p.done).reduce((s,p)=>s+p.amount,0);
+  if(S.data.projected.length) {
+    const dogCard = document.createElement('div');
+    dogCard.style.cssText='position:relative;background:linear-gradient(135deg,#FFF4E0,#FFEAEA);border:2px solid #FFB34766;border-radius:16px;padding:1rem 1.2rem;margin-bottom:1.2rem;overflow:hidden;display:flex;align-items:center;gap:1rem';
+
+    const dogSvg = `<svg viewBox="0 0 80 72" xmlns="http://www.w3.org/2000/svg" style="width:70px;flex-shrink:0;animation:catbob 2.5s ease-in-out infinite">
+      <!-- Tail wagging -->
+      <path d="M62 52 C74 44 80 32 70 24 C65 19 59 25 64 30" stroke="#C9943B" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <!-- Body -->
+      <ellipse cx="36" cy="50" rx="25" ry="19" fill="#E8B96A"/>
+      <ellipse cx="36" cy="53" rx="18" ry="12" fill="#D4A555"/>
+      <!-- Head -->
+      <circle cx="36" cy="26" r="17" fill="#E8B96A"/>
+      <!-- Ears (floppy) -->
+      <ellipse cx="20" cy="20" rx="7" ry="11" fill="#C9943B" transform="rotate(-20 20 20)"/>
+      <ellipse cx="52" cy="20" rx="7" ry="11" fill="#C9943B" transform="rotate(20 52 20)"/>
+      <!-- Eyes -->
+      <circle cx="29" cy="24" r="3" fill="#5A3A1A"/>
+      <circle cx="43" cy="24" r="3" fill="#5A3A1A"/>
+      <circle cx="30" cy="23" r="1" fill="#FFF"/>
+      <circle cx="44" cy="23" r="1" fill="#FFF"/>
+      <!-- Nose -->
+      <ellipse cx="36" cy="31" rx="3" ry="2" fill="#8B5A2B"/>
+      <!-- Mouth -->
+      <path d="M33,34 Q36,37 39,34" stroke="#8B5A2B" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      <!-- Tongue -->
+      <ellipse cx="36" cy="37" rx="3" ry="2" fill="#FF9AA2"/>
+      <!-- Paws -->
+      <ellipse cx="22" cy="66" rx="9" ry="5" fill="#E8B96A"/>
+      <ellipse cx="46" cy="66" rx="9" ry="5" fill="#E8B96A"/>
+    </svg>`;
+
+    const dogEl = document.createElement('div'); dogEl.innerHTML=dogSvg;
+    dogCard.appendChild(dogEl);
+
+    const info = document.createElement('div'); info.style.flex='1';
+    const lbl = document.createElement('div'); lbl.style.cssText='font-size:.68rem;font-weight:800;color:#A07030;text-transform:uppercase;letter-spacing:.8px;margin-bottom:.2rem'; lbl.textContent='Total proyectado pendiente';
+    const val = document.createElement('div'); val.style.cssText="font-family:'Lora',serif;font-size:2rem;font-weight:700;color:#A07030;letter-spacing:-.5px"; val.textContent=fmt(totalPend);
+    if(totalHecho>0){
+      const done = document.createElement('div'); done.style.cssText='font-size:.75rem;font-weight:700;color:#2A7050;margin-top:.2rem'; done.textContent='✓ Ya ejecutado: '+fmt(totalHecho);
+      info.appendChild(lbl); info.appendChild(val); info.appendChild(done);
+    } else {
+      info.appendChild(lbl); info.appendChild(val);
+    }
+    dogCard.appendChild(info);
+    root.appendChild(dogCard);
+  }
+
   if(!sorted.length) root.appendChild(pe({cn:'empty'},['Nada proyectado aún. ¡Agregá algo!']));
 
   sorted.forEach(p=>{
