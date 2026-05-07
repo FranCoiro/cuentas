@@ -533,12 +533,10 @@ function rHome(c) {
     weeklyCatsAll.forEach(cat=>{
       if(cat.name.toLowerCase().includes('miguel')) return;
       // Find sub-item named exactly "Semana N" (exact match, case-insensitive)
-      // Find sub-item for current week: "Semana N" anywhere in name, or "Extra semana N"
-      const subItem = (cat.subitems||[]).find(si=>{
-        const n = si.name.trim().toLowerCase();
-        // Matches: "semana 1", "semana 1 san felipe", "extra semana 1", etc.
-        return new RegExp('semana\\s+'+wn+'(\\s|$|[^0-9])').test(n);
-      });
+      // Find sub-item for current week — exact "Semana N" match
+      const subItem = (cat.subitems||[]).find(si=>
+        si.name.trim().toLowerCase() === 'semana '+wn
+      );
       // If no sub-items at all, use category budget
       const budget = subItem ? (subItem.budget||0) : ((cat.subitems||[]).length===0 ? (cat.budget||0) : 0);
       if(!budget) return;
@@ -576,6 +574,39 @@ function rHome(c) {
       subEl.textContent=fmt(totalSpent)+' gastado de '+fmt(totalBudget)+' presupuestado esta semana';
       tsCard.appendChild(subEl);
 
+      // Day dots
+      const dayNames = ['L','M','X','J','V','S','D'];
+      const startDayIdx = DAY_MAP[startDay]||1; // 0=Dom,1=Lun...6=Sab
+      // Build ordered days starting from weekStart
+      const orderedDays = [];
+      for(let d=0;d<7;d++){
+        const dayIdx = (startDayIdx + d) % 7;
+        orderedDays.push(dayIdx);
+      }
+      const todayDow = today2.getDay();
+      const daysElapsed = orderedDays.indexOf(todayDow) + 1; // 1-7
+
+      const dotsWrap = document.createElement('div');
+      dotsWrap.style.cssText='display:flex;align-items:center;gap:4px;margin-bottom:.8rem';
+      orderedDays.forEach((dow,i)=>{
+        const col = document.createElement('div');
+        col.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px';
+        const dot = document.createElement('div');
+        const passed = i < daysElapsed;
+        const isToday = i === daysElapsed-1;
+        dot.style.cssText='width:'+(isToday?'12px':'8px')+';height:'+(isToday?'12px':'8px')+
+          ';border-radius:50%;background:'+(passed?'rgba(90,60,120,0.7)':'rgba(255,255,255,0.4)')+
+          ';transition:all .3s'+(isToday?';box-shadow:0 0 0 3px rgba(90,60,120,0.25)':'');
+        const lbl = document.createElement('span');
+        lbl.style.cssText='font-size:.55rem;font-weight:800;color:'+(passed?'rgba(60,40,80,0.8)':'rgba(120,100,140,0.5)');
+        // Map dow to letter
+        const ltrs=['D','L','M','X','J','V','S'];
+        lbl.textContent=ltrs[dow];
+        col.appendChild(dot); col.appendChild(lbl);
+        dotsWrap.appendChild(col);
+      });
+      tsCard.appendChild(dotsWrap);
+
       const itemsEl=div({cn:'ts-items'});
       tsItems.forEach(({cat,budget,spent,remain:rem})=>{
         const pct2=Math.min(100,budget>0?(spent/budget)*100:0);
@@ -609,10 +640,9 @@ function rHome(c) {
   (S.data.cats||[]).forEach(cat=>{
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
-      const isWeeklyNamed = /semana\s*\d/i.test(si.name);
+      const isWeeklyNamed = /^semana\s*\d/i.test(si.name.trim());
       let isPaid = false;
       if(isWeeklyNamed && si.paidWeek){
-        // Check if paidWeek matches current week for this category
         const wkey2 = getWeekKey(cat.weekStart||'Lunes');
         isPaid = si.paidWeek === wkey2;
       } else {
@@ -1553,6 +1583,29 @@ create policy "allow_all" on mf_finanzas
     addSub.style.cssText='font-size:1.1rem;color:var(--purple);font-weight:800;padding:0 .3rem;min-height:36px;flex-shrink:0;background:none;border:none;cursor:pointer';
     addSub.title='Agregar sub-ítem'; addSub.textContent='＋';
     addSub.addEventListener('click',()=>{ S.data.cats[i].subitems.push({id:Date.now(),name:'',budget:0}); renderSubs(); });
+
+    // Auto-generate weeks button (only for semanal)
+    if(cat.freq==='semanal'){
+      const autoBtn = document.createElement('button');
+      autoBtn.style.cssText='font-size:.75rem;font-weight:800;padding:0 .5rem;min-height:36px;flex-shrink:0;background:#E8D5FF;border:none;border-radius:7px;cursor:pointer;color:#8B5BAE;white-space:nowrap';
+      autoBtn.title='Generar semanas automáticamente';
+      autoBtn.textContent='⚡ Auto';
+      autoBtn.addEventListener('click',()=>{
+        const weekBudget = S.data.cats[i].budget || 0;
+        const perWeek = weekBudget > 0 ? Math.round(weekBudget/4) : 0;
+        S.data.cats[i].subitems = [1,2,3,4].map(n=>({
+          id: Date.now()+n,
+          name: 'Semana '+n,
+          budget: perWeek,
+          paid: false,
+          paidWeek: null
+        }));
+        bInp.value = weekBudget;
+        save();
+        renderSubs();
+      });
+      row.appendChild(autoBtn);
+    }
     row.appendChild(addSub);
 
     // Delete category button
