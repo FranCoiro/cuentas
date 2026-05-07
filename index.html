@@ -521,11 +521,19 @@ function rHome(c) {
     : 'linear-gradient(135deg,#FFE0E0,#FFD5D5)';   // rojo
 
   const hero = div({cn:'hero',style:{background:heroGrad}});
-  hero.appendChild(div({cn:'hero-eye'},['balance del mes']));
-  const balEl = document.createElement('div');
-  balEl.className = 'hero-bal '+(bal>=0?'pos':'neg');
-  balEl.textContent = (bal<0?'–':'')+fmt(bal);
-  hero.appendChild(balEl);
+  // Disponible real = número principal
+  const dispEye = document.createElement('div'); dispEye.className='hero-eye';
+  dispEye.textContent = disponible>=0 ? '✓ disponible real este mes' : '⚠️ déficit proyectado';
+  hero.appendChild(dispEye);
+  const dispBig = document.createElement('div');
+  dispBig.className='hero-bal '+(disponible>=0?'pos':'neg');
+  dispBig.textContent=(disponible<0?'–':'')+fmt(Math.abs(disponible));
+  hero.appendChild(dispBig);
+  // Balance bruto como sub-info
+  const balSmall=document.createElement('div');
+  balSmall.style.cssText='font-size:.75rem;font-weight:700;color:#7A6A90;margin-bottom:.7rem';
+  balSmall.textContent='Balance del mes: '+(bal<0?'–':'')+fmt(bal);
+  hero.appendChild(balSmall);
 
   const hr = div({cn:'hero-row'});
   hr.appendChild(div({cn:'hero-half'},[sp('hh-lbl','↑ Ingresos'),sp('hh-val inc-val',fmt(inc))]));
@@ -542,17 +550,13 @@ function rHome(c) {
   }
   hero.appendChild(hr);
 
-  // Disponible real strip
+  // Disponible detail strip (expandable)
   const dispStrip = document.createElement('div');
-  dispStrip.style.cssText='margin-top:.7rem;background:rgba(255,255,255,.55);border-radius:10px;padding:.5rem .8rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer';
-  const dispLbl = document.createElement('span');
-  dispLbl.style.cssText='font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#5A4A6A';
-  dispLbl.textContent = (disponible>=0 ? '✓ Disponible real' : '⚠️ Déficit proyectado') + ' (click para desglose)';
-  const dispVal = document.createElement('span');
-  dispVal.className = 'disp-strip-val';
-  dispVal.style.cssText="font-family:'Lora',serif;font-size:1.1rem;font-weight:700;color:"+(disponible>=0?'#2A7050':'#A03030');
-  dispVal.textContent = (disponible<0?'–':'')+fmt(Math.abs(disponible));
-  dispStrip.appendChild(dispLbl); dispStrip.appendChild(dispVal);
+  dispStrip.style.cssText='margin-top:0;background:rgba(255,255,255,.55);border-radius:10px;padding:.5rem .8rem;display:flex;flex-direction:column;gap:.2rem;cursor:pointer';
+  const dispLbl = document.createElement('div');
+  dispLbl.style.cssText='font-size:.68rem;font-weight:700;color:#7A6A90;text-align:center';
+  dispLbl.textContent='▼ Ver desglose del disponible';
+  dispStrip.appendChild(dispLbl);
 
   // Expandable breakdown
   const dispDetail = document.createElement('div');
@@ -567,13 +571,6 @@ function rHome(c) {
   if(projMes>0)        dispDetail.appendChild(mkDRow('🔮 Proyectados este mes',projMes,true));
   if(subitemsPend>0)   dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',subitemsPend,true));
   if(reservasTot>0)    dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',reservasTot,true));
-  // Always show sub-items pending if any
-  if(subitemsPend>0){
-    const siRow=document.createElement('div');
-    siRow.style.cssText='margin-top:.35rem;font-size:.72rem;font-weight:700;color:#8B5BAE';
-    siRow.textContent='📋 Sub-ítems pendientes: –'+fmt(subitemsPend);
-    dispStrip.appendChild(siRow);
-  }
   dispStrip.addEventListener('click',()=>{
     dispDetail.style.display = dispDetail.style.display==='none'?'block':'none';
   });
