@@ -755,7 +755,27 @@ function rHome(c) {
   };
   if(pendFixed>0)      dispDetail.appendChild(mkDRow('📌 Fijos por pagar',pendFixed,true));
   if(projMes>0)        dispDetail.appendChild(mkDRow('🔮 Proyectados este mes',projMes,true));
-  if(siPagados>0)   dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',siPagados,true));
+  if(siPagados>0){
+    dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',siPagados,true));
+    // Show detail of which sub-items
+    const siDetail=document.createElement('div'); siDetail.style.cssText='margin-left:.5rem;margin-top:.2rem';
+    (S.data.cats||[]).forEach(cat=>{
+      (cat.subitems||[]).forEach(si=>{
+        if((si.budget||0)<=0) return;
+        const n2=si.name.trim().toLowerCase();
+        const isW=n2.startsWith('semana ');
+        let isPd=false;
+        if(isW){ const ck=getWeekKey(cat.weekStart||'Lunes'); isPd=si.paidWeek===ck; }
+        else { isPd=!!si.paid; }
+        if(!isPd){
+          const r=document.createElement('div'); r.style.cssText='font-size:.65rem;color:#8A6A6A;padding:.05rem 0';
+          r.textContent='  · '+cat.name+': '+si.name+' –'+fmt(si.budget);
+          siDetail.appendChild(r);
+        }
+      });
+    });
+    dispDetail.appendChild(siDetail);
+  }
   if(resvTot>0)    dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',resvTot,true));
   dispStrip.addEventListener('click',()=>{
     dispDetail.style.display = dispDetail.style.display==='none'?'block':'none';
