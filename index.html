@@ -497,21 +497,28 @@ function rHome(c) {
     root.appendChild(ab);
   }
 
-  // Calculate all components
-  const inc = totalIncome(), exp = totalExpenses();
-  const paidFixed   = (S.data.fixed||[]).filter(f=> f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
-  const pendFixed   = (S.data.fixed||[]).filter(f=>!f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
-  const fondosMes   = (S.data.fondos||[]).reduce((s,f)=>
+  // ── Calcular todo ──
+  const inc       = totalIncome();
+  const exp       = totalExpenses();
+  const paidFixed = (S.data.fixed||[]).filter(f=> f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
+  const pendFixed = (S.data.fixed||[]).filter(f=>!f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
+  const fondosMes = (S.data.fondos||[]).reduce((s,f)=>
     s+(f.aportes||[]).filter(a=>a.date&&a.date.slice(0,7)===mk()).reduce((a2,ap)=>a2+ap.amount,0),0);
-  const projMes     = S.data.projected.filter(p=>!p.done&&p.targetMonth===mk()).reduce((s,p)=>s+p.amount,0);
-  const reservasTot = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
-  const subitemsPend = S.data.cats.reduce((s,cat)=>{
-    if(cat.name.toLowerCase().includes('miguel')) return s;
-    return s+(cat.subitems||[]).filter(si=>si.paid).reduce((a,si)=>a+(si.budget||0),0);
-  },0);
-  const bal         = inc - exp - paidFixed - fondosMes;
-  const disponible  = bal - pendFixed - projMes - reservasTot - subitemsPend;
-  const totalFixed  = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
+  const projMes   = (S.data.projected||[]).filter(p=>!p.done&&p.targetMonth===mk()).reduce((s,p)=>s+p.amount,0);
+  const resvTot   = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
+
+  // Sub-ítems tachados (✓ = ya lo pagué = se descuenta)
+  let siPagados = 0;
+  (S.data.cats||[]).forEach(cat=>{
+    if(cat.name.toLowerCase().includes('miguel')) return;
+    (cat.subitems||[]).forEach(si=>{ if(si.paid && si.budget>0) siPagados += si.budget; });
+  });
+
+  const bal       = inc - exp - paidFixed - fondosMes;
+  const disponible = bal - pendFixed - projMes - resvTot - siPagados;
+  const totalFixed = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
+
+
   // Semaforo color
   const dispColor = disponible > 0 ? 'pos' : 'neg';
   const heroGrad = disponible > 50000
@@ -569,8 +576,8 @@ function rHome(c) {
   };
   if(pendFixed>0)      dispDetail.appendChild(mkDRow('📌 Fijos por pagar',pendFixed,true));
   if(projMes>0)        dispDetail.appendChild(mkDRow('🔮 Proyectados este mes',projMes,true));
-  if(subitemsPend>0)   dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',subitemsPend,true));
-  if(reservasTot>0)    dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',reservasTot,true));
+  if(siPagados>0)   dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',siPagados,true));
+  if(resvTot>0)    dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',resvTot,true));
   dispStrip.addEventListener('click',()=>{
     dispDetail.style.display = dispDetail.style.display==='none'?'block':'none';
   });
