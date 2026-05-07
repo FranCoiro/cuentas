@@ -543,13 +543,19 @@ function rHome(c) {
 
       const wkMk = weekStartDate.getFullYear()+'-'+String(weekStartDate.getMonth()+1).padStart(2,'0');
       const monthData2 = S.data.months[wkMk]||{income:[],expenses:[]};
-      // Also check current month in case week spans two months
       const curMonthData = mdata();
       const allExpenses2 = [...(monthData2.expenses||[])];
       if(wkMk !== mk()) allExpenses2.push(...(curMonthData.expenses||[]));
-      const spent = allExpenses2
+      // Actual recorded expenses this week for this category
+      const actualSpent = allExpenses2
         .filter(e=>e.category===cat.id && e.date>=wds && e.date<=wde)
         .reduce((s,e)=>s+e.amount,0);
+      // Also count ticked sub-items as "paid outside app"
+      const tickedAmt = (cat.subitems||[]).reduce((s,si)=>{
+        if(si.name.trim().toLowerCase()!=='semana '+wn) return s;
+        return s + (si.paidWeek===wkey ? (si.budget||0) : 0);
+      },0);
+      const spent = actualSpent + (tickedAmt > actualSpent ? tickedAmt - actualSpent : 0);
 
       totalBudget += budget;
       totalSpent  += spent;
@@ -1197,14 +1203,38 @@ function rExpenses(c) {
       const card = div({cn:'move-card',style:{borderLeftColor:cat.color}});
       card.appendChild(el('span',{cn:'card-icon'},[cat.icon]));
       const info = div({cn:'card-info'});
-      info.appendChild(div({cn:'card-desc'},[exp.desc]));
-      info.appendChild(div({cn:'card-meta'},[cat.name+' · '+exp.date+(exp.note?' · '+exp.note:'')]));
+      const descView=div({cn:'card-desc'},[exp.desc]);
+      const metaView=div({cn:'card-meta'},[cat.name+' · '+exp.date+(exp.note?' · '+exp.note:'')]);
+      const editForm=document.createElement('div');
+      editForm.style.cssText='display:none;flex-direction:column;gap:4px;margin-top:3px';
+      const eAmt=document.createElement('input'); eAmt.type='number'; eAmt.value=exp.amount;
+      eAmt.style.cssText='border:1.5px solid var(--border);border-radius:6px;padding:3px 7px;font-size:.82rem;width:110px;font-weight:700';
+      const eDate=document.createElement('input'); eDate.type='date'; eDate.value=exp.date;
+      eDate.style.cssText='border:1.5px solid var(--border);border-radius:6px;padding:3px 7px;font-size:.82rem';
+      const eRow=document.createElement('div'); eRow.style.cssText='display:flex;gap:4px;flex-wrap:wrap;align-items:center';
+      const eSave=document.createElement('button');
+      eSave.style.cssText='font-size:.72rem;font-weight:800;background:#77DD77;color:#fff;border:none;border-radius:6px;padding:3px 9px;cursor:pointer';
+      eSave.textContent='✓';
+      const expId=exp.id;
+      eSave.addEventListener('click',()=>{
+        const idx2=mdata().expenses.findIndex(x=>x.id===expId);
+        if(idx2>=0){ mdata().expenses[idx2].amount=Number(eAmt.value)||exp.amount; mdata().expenses[idx2].date=eDate.value||exp.date; }
+        save(); render();
+      });
+      eRow.appendChild(eAmt); eRow.appendChild(eDate); eRow.appendChild(eSave);
+      editForm.appendChild(eRow);
+      info.appendChild(descView); info.appendChild(metaView); info.appendChild(editForm);
       card.appendChild(info);
       card.appendChild(div({cn:'card-amt',style:{color:'var(--red-dark)'}},['–'+fmt(exp.amount)]));
-      card.appendChild(btn({cn:'del-x',onClick:() => {
-        mdata().expenses = mdata().expenses.filter(x => x.id !== exp.id);
-        save(); render();
-      }},['✕']));
+      let editOpen=false;
+      const editBtn=document.createElement('button'); editBtn.className='del-x'; editBtn.textContent='✏️';
+      editBtn.addEventListener('click',()=>{
+        editOpen=!editOpen;
+        editForm.style.display=editOpen?'flex':'none';
+        editBtn.textContent=editOpen?'↩':'✏️';
+      });
+      card.appendChild(editBtn);
+      card.appendChild(btn({cn:'del-x',onClick:()=>{ mdata().expenses=mdata().expenses.filter(x=>x.id!==expId); save();render(); }},['🗑']));
       ul.appendChild(card);
     });
     root.appendChild(ul);
@@ -1568,8 +1598,8 @@ create policy "allow_all" on mf_finanzas
     fseg.className='seg'; fseg.style.cssText='flex:0 0 auto;width:110px;margin-left:.3rem';
     const fw = document.createElement('button'); fw.className='seg-btn'+(cat.freq==='semanal'?' on':''); fw.style.cssText='font-size:.65rem;padding:.3rem'; fw.textContent='📅Sem';
     const fm = document.createElement('button'); fm.className='seg-btn'+(cat.freq==='mensual'?' on':''); fm.style.cssText='font-size:.65rem;padding:.3rem'; fm.textContent='📆Mes';
-    fw.addEventListener('click',()=>{ S.data.cats[i].freq='semanal'; fw.className='seg-btn on'; fm.className='seg-btn'; weekRow.style.display='flex'; });
-    fm.addEventListener('click',()=>{ S.data.cats[i].freq='mensual'; fm.className='seg-btn on'; fw.className='seg-btn'; weekRow.style.display='none'; });
+    fw.addEventListener('click',()=>{ S.data.cats[i].freq='semanal'; save(); render(); });
+    fm.addEventListener('click',()=>{ S.data.cats[i].freq='mensual'; save(); render(); });
     fseg.appendChild(fw); fseg.appendChild(fm); row.appendChild(fseg);
 
     // Budget
@@ -1588,14 +1618,16 @@ create policy "allow_all" on mf_finanzas
     if(cat.freq==='semanal'){
       const autoBtn = document.createElement('button');
       autoBtn.style.cssText='font-size:.75rem;font-weight:800;padding:0 .5rem;min-height:36px;flex-shrink:0;background:#E8D5FF;border:none;border-radius:7px;cursor:pointer;color:#8B5BAE;white-space:nowrap';
-      autoBtn.title='Generar semanas automáticamente';
-      autoBtn.textContent='⚡ Auto';
+      autoBtn.title='Generar semanas (toca para alternar 4/5 semanas)';
+      const currentWeeks = (cat.subitems||[]).length;
+      autoBtn.textContent='⚡ '+(currentWeeks>=5?'4sem':'5sem');
       autoBtn.addEventListener('click',()=>{
+        const nWeeks = ((S.data.cats[i].subitems||[]).length >= 5) ? 4 : 5
         const weekBudget = S.data.cats[i].budget || 0;
-        const perWeek = weekBudget > 0 ? Math.round(weekBudget/4) : 0;
-        S.data.cats[i].subitems = [1,2,3,4].map(n=>({
-          id: Date.now()+n,
-          name: 'Semana '+n,
+        const perWeek = weekBudget > 0 ? Math.round(weekBudget/nWeeks) : 0;
+        S.data.cats[i].subitems = Array.from({length:nWeeks},(_,idx)=>({
+          id: Date.now()+idx+1,
+          name: 'Semana '+(idx+1),
           budget: perWeek,
           paid: false,
           paidWeek: null
