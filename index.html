@@ -201,6 +201,21 @@ input{outline:none}
 .reserva-inp:focus{outline:none;border-color:rgba(0,0,0,.3)}
 .reserva-add-btn{background:rgba(0,0,0,.12);border:none;border-radius:8px;padding:.35rem .7rem;font-size:.78rem;font-weight:800;cursor:pointer;color:var(--text);white-space:nowrap}
 .reserva-add-btn:hover{background:rgba(0,0,0,.2)}
+.tarjeta-semanal{background:linear-gradient(135deg,#E8D5FF,#C9E8FF);border-radius:20px;padding:1.2rem 1.3rem;margin-bottom:1.2rem;position:relative;overflow:hidden}
+.tarjeta-semanal::after{content:"";position:absolute;top:-20px;right:-20px;width:90px;height:90px;background:rgba(255,255,255,.2);border-radius:50%}
+.ts-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.8rem}
+.ts-title{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#7A6A90}
+.ts-week{font-size:.65rem;font-weight:700;color:#9A8AAA;background:rgba(255,255,255,.4);padding:.15rem .5rem;border-radius:8px}
+.ts-saldo{font-family:'Lora',serif;font-size:2.4rem;font-weight:700;color:#3A3040;letter-spacing:-.5px;margin-bottom:.2rem}
+.ts-sub{font-size:.72rem;color:#7A6A90;font-weight:600;margin-bottom:.9rem}
+.ts-items{background:rgba(255,255,255,.5);border-radius:12px;padding:.6rem .8rem;display:flex;flex-direction:column;gap:.35rem}
+.ts-row{display:flex;align-items:center;gap:.5rem}
+.ts-icon{font-size:.9rem;flex-shrink:0}
+.ts-name{font-size:.72rem;font-weight:700;color:#5A4A6A;flex:1}
+.ts-bar-wrap{flex:2;height:4px;background:rgba(0,0,0,.1);border-radius:2px;overflow:hidden}
+.ts-bar-fill{height:100%;border-radius:2px;transition:width .5s}
+.ts-remain{font-size:.72rem;font-weight:800;white-space:nowrap}
+.ts-remain.ok{color:#2A7050}.ts-remain.warn{color:#D08000}.ts-remain.over{color:#A03030}
 .miguel-card{background:linear-gradient(135deg,#FFF0F1,#FFE8EA);border:2px solid #FF9AA266;border-radius:14px;padding:.9rem 1.1rem;margin-bottom:1rem}
 .miguel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
 .miguel-tag{display:inline-block;background:#FF9AA2;color:#FFF;font-size:.6rem;font-weight:800;padding:.1rem .45rem;border-radius:8px;letter-spacing:.3px;text-transform:uppercase;margin-left:.4rem;vertical-align:middle}
@@ -498,6 +513,73 @@ function rHome(c) {
   }
 
   // ── Calcular todo ──
+  // ── Tarjeta semanal ──
+  const weeklyCatsHome = S.data.cats.filter(c=>c.freq==='semanal'&&(c.subitems||[]).length>0);
+  if(weeklyCatsHome.length>0){
+    const wn = getCurrentWeekNum(weeklyCatsHome[0].weekStart||'Lunes');
+    const wkey = getWeekKey(weeklyCatsHome[0].weekStart||'Lunes');
+    const today2 = new Date();
+    const weekStartDate = getWeekStartDate(today2, weeklyCatsHome[0].weekStart||'Lunes');
+    const weekEndDate = new Date(weekStartDate); weekEndDate.setDate(weekStartDate.getDate()+6);
+    const wds = weekStartDate.toISOString().split('T')[0];
+    const wde = weekEndDate.toISOString().split('T')[0];
+
+    // Build weekly items
+    const tsItems = [];
+    let totalBudgetWeek = 0, totalSpentWeek = 0;
+    weeklyCatsHome.forEach(cat=>{
+      if(cat.name.toLowerCase().includes('miguel')) return;
+      const subItem = (cat.subitems||[]).find(si=>si.name.toLowerCase().includes('semana '+wn));
+      const budget = subItem ? (subItem.budget||0) : 0;
+      if(!budget) return;
+      // Spending this week for this category
+      const spent = (mdata().expenses||[]).filter(e=>{
+        if(e.category!==cat.id) return false;
+        return e.date>=wds && e.date<=wde;
+      }).reduce((s,e)=>s+e.amount,0);
+      totalBudgetWeek += budget;
+      totalSpentWeek  += spent;
+      tsItems.push({cat,budget,spent,remain:budget-spent});
+    });
+
+    if(totalBudgetWeek>0){
+      const tsCard = div({cn:'tarjeta-semanal'});
+
+      const tshdr = div({cn:'ts-header'});
+      const tstitle = document.createElement('div'); tstitle.className='ts-title'; tstitle.textContent='💳 Tarjeta semanal';
+      const tswk = document.createElement('div'); tswk.className='ts-week'; tswk.textContent='Semana '+wn+' · '+wds.slice(5)+' → '+wde.slice(5);
+      tshdr.appendChild(tstitle); tshdr.appendChild(tswk);
+      tsCard.appendChild(tshdr);
+
+      const remain = totalBudgetWeek - totalSpentWeek;
+      const pct = Math.min(100,(totalSpentWeek/totalBudgetWeek)*100);
+      const saldoEl = document.createElement('div'); saldoEl.className='ts-saldo';
+      saldoEl.textContent = (remain<0?'–':'')+fmt(Math.abs(remain));
+      if(remain<0) saldoEl.style.color='#A03030';
+      tsCard.appendChild(saldoEl);
+
+      const subEl = document.createElement('div'); subEl.className='ts-sub';
+      subEl.textContent = fmt(totalSpentWeek)+' gastado de '+fmt(totalBudgetWeek)+' presupuestado';
+      tsCard.appendChild(subEl);
+
+      const itemsEl = div({cn:'ts-items'});
+      tsItems.forEach(({cat,budget,spent,remain:rem})=>{
+        const pct2 = Math.min(100,(spent/budget)*100);
+        const remCls = rem<0?'over':pct2>75?'warn':'ok';
+        const row=div({cn:'ts-row'});
+        const ico=document.createElement('span'); ico.className='ts-icon'; ico.textContent=cat.icon;
+        const nm=document.createElement('span'); nm.className='ts-name'; nm.textContent=cat.name;
+        const barWrap=div({cn:'ts-bar-wrap'},[div({cn:'ts-bar-fill',style:{width:pct2+'%',background:rem<0?'#E05050':cat.color}})]);
+        const remEl=document.createElement('span'); remEl.className='ts-remain '+remCls;
+        remEl.textContent=(rem<0?'–':'')+fmt(Math.abs(rem));
+        row.appendChild(ico); row.appendChild(nm); row.appendChild(barWrap); row.appendChild(remEl);
+        itemsEl.appendChild(row);
+      });
+      tsCard.appendChild(itemsEl);
+      root.appendChild(tsCard);
+    }
+  }
+
   const inc       = totalIncome();
   const exp       = totalExpenses();
   const paidFixed = (S.data.fixed||[]).filter(f=> f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
