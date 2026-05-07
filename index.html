@@ -533,11 +533,13 @@ function rHome(c) {
     weeklyCatsAll.forEach(cat=>{
       if(cat.name.toLowerCase().includes('miguel')) return;
       // Find sub-item named exactly "Semana N" (exact match, case-insensitive)
+      // Find sub-item for current week: "Semana N" anywhere in name, or "Extra semana N"
       const subItem = (cat.subitems||[]).find(si=>{
         const n = si.name.trim().toLowerCase();
-        return n === 'semana '+wn || n.startsWith('semana '+wn+' ') || n.startsWith('semana '+wn+':');
+        // Matches: "semana 1", "semana 1 san felipe", "extra semana 1", etc.
+        return new RegExp('semana\\s+'+wn+'(\\s|$|[^0-9])').test(n);
       });
-      // Also use category budget directly if no subitems but category is weekly
+      // If no sub-items at all, use category budget
       const budget = subItem ? (subItem.budget||0) : ((cat.subitems||[]).length===0 ? (cat.budget||0) : 0);
       if(!budget) return;
 
@@ -601,25 +603,22 @@ function rHome(c) {
   const projMes   = (S.data.projected||[]).filter(p=>!p.done&&p.targetMonth===mk()).reduce((s,p)=>s+p.amount,0);
   const resvTot   = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
 
-  // Sub-ítems pendientes = todos los NO pagados se descuentan del disponible
-  // (tanto semanales como mensuales — representa todo lo que falta por pagar)
+  // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
+  // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
-      const isWeekly = cat.freq==='semanal' && si.name.toLowerCase().includes('semana');
-      if(isWeekly){
-        // Para semanales: verificar si está pagada esta semana específica
-        const wn2 = getCurrentWeekNum(cat.weekStart||'Lunes');
+      const isWeeklyNamed = /semana\s*\d/i.test(si.name);
+      let isPaid = false;
+      if(isWeeklyNamed && si.paidWeek){
+        // Check if paidWeek matches current week for this category
         const wkey2 = getWeekKey(cat.weekStart||'Lunes');
-        // Solo descuenta sub-ítems de semanas que aún no han pasado O la actual si no está pagada
-        const siWn = parseInt((si.name.match(/semana\s+(\d)/i)||[])[1]||'0');
-        if(siWn < wn2) return; // semana pasada, ya no cuenta
-        if(siWn === wn2 && si.paidWeek === wkey2) return; // semana actual pagada
-        siPagados += si.budget;
+        isPaid = si.paidWeek === wkey2;
       } else {
-        if(!si.paid) siPagados += si.budget;
+        isPaid = !!si.paid;
       }
+      if(!isPaid) siPagados += si.budget;
     });
   });
 
