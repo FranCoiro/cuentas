@@ -550,12 +550,15 @@ function rHome(c) {
       const actualSpent = allExpenses2
         .filter(e=>e.category===cat.id && e.date>=wds && e.date<=wde)
         .reduce((s,e)=>s+e.amount,0);
-      // Also count ticked sub-items as "paid outside app"
+      // Count ticked sub-items using THIS category's own weekStart
+      const catWkey = getWeekKey(cat.weekStart||startDay);
+      const catWn   = getCurrentWeekNum(cat.weekStart||startDay);
       const tickedAmt = (cat.subitems||[]).reduce((s,si)=>{
-        if(si.name.trim().toLowerCase()!=='semana '+wn) return s;
-        return s + (si.paidWeek===wkey ? (si.budget||0) : 0);
+        const n = si.name.trim().toLowerCase();
+        if(n !== 'semana '+catWn) return s;
+        return s + (si.paidWeek===catWkey ? (si.budget||0) : 0);
       },0);
-      const spent = actualSpent + (tickedAmt > actualSpent ? tickedAmt - actualSpent : 0);
+      const spent = Math.max(actualSpent, tickedAmt);
 
       totalBudget += budget;
       totalSpent  += spent;
@@ -633,12 +636,15 @@ function rHome(c) {
 
   const inc       = totalIncome();
   const exp       = totalExpenses();
+  const today3    = new Date();
+  const curMonthStr2 = today3.getFullYear()+'-'+String(today3.getMonth()+1).padStart(2,'0');
+  const isFuture  = mk() > curMonthStr2;
   const paidFixed = (S.data.fixed||[]).filter(f=> f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
   const pendFixed = (S.data.fixed||[]).filter(f=>!f['paid_'+mk()]).reduce((s,f)=>s+f.amount,0);
   const fondosMes = (S.data.fondos||[]).reduce((s,f)=>
     s+(f.aportes||[]).filter(a=>a.date&&a.date.slice(0,7)===mk()).reduce((a2,ap)=>a2+ap.amount,0),0);
   const projMes   = (S.data.projected||[]).filter(p=>!p.done&&p.targetMonth===mk()).reduce((s,p)=>s+p.amount,0);
-  const resvTot   = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
+  const resvTot   = (mdata().reservas||[]).reduce((s,r)=>s+r.amount,0);
 
   // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
   // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
@@ -662,6 +668,43 @@ function rHome(c) {
   const disponible = bal - pendFixed - projMes - resvTot - siPagados;
   const totalFixed = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
 
+
+  // If future month: show projection mode
+  if(isFuture){
+    const projCard = div({cn:'hero',style:{background:'linear-gradient(135deg,#F0E6FF,#E8F0FF)'}});
+    projCard.appendChild(div({cn:'hero-eye'},['📅 proyección del mes']));
+
+    // Projected income input
+    const projInc = mdata().projectedIncome || 0;
+    const projIncRow = document.createElement('div');
+    projIncRow.style.cssText='display:flex;align-items:center;gap:.5rem;margin-bottom:.7rem';
+    const piLbl=document.createElement('span'); piLbl.style.cssText='font-size:.75rem;font-weight:700;color:#7A6A90'; piLbl.textContent='Ingreso esperado:';
+    const piInp=document.createElement('input'); piInp.type='number'; piInp.value=projInc||'';
+    piInp.placeholder='$0'; piInp.style.cssText="border:2px solid var(--border);border-radius:8px;padding:.3rem .6rem;font-family:'Lora',serif;font-size:1rem;font-weight:700;width:140px";
+    piInp.addEventListener('change',()=>{ mdata().projectedIncome=Number(piInp.value); save(); render(); });
+    projIncRow.appendChild(piLbl); projIncRow.appendChild(piInp);
+    projCard.appendChild(projIncRow);
+
+    // Calculate projected balance
+    const projFixed = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
+    const projSubs  = S.data.cats.reduce((s,cat)=>{
+      if(cat.name.toLowerCase().includes('miguel')) return s;
+      return s+(cat.subitems||[]).reduce((a,si)=>a+(si.budget||0),0);
+    },0);
+    const projBal = (projInc||0) - projFixed - projSubs;
+
+    const projNum=document.createElement('div'); projNum.className='hero-bal '+(projBal>=0?'pos':'neg');
+    projNum.textContent=(projBal<0?'–':'')+fmt(Math.abs(projBal));
+    projCard.appendChild(projNum);
+
+    const projDetail=document.createElement('div'); projDetail.style.cssText='background:rgba(255,255,255,.5);border-radius:10px;padding:.5rem .7rem;font-size:.73rem;font-weight:700;color:#5A4A6A';
+    projDetail.innerHTML='📌 Fijos: –'+fmt(projFixed)+'<br>📋 Sub-ítems: –'+fmt(projSubs);
+    projCard.appendChild(projDetail);
+
+    root.appendChild(projCard);
+    root.appendChild(h2e({cn:'sec-title'},['Mis categorías']));
+    return; // Don't render the rest for future months
+  }
 
   // Semaforo color
   const dispColor = disponible > 0 ? 'pos' : 'neg';
@@ -729,17 +772,17 @@ function rHome(c) {
   hero.appendChild(dispDetail);
 
   // Reservas inline
-  if (!S.data.reservas) S.data.reservas=[];
-  if(S.data.reservas.length || true){
+  if (!mdata().reservas) mdata().reservas=[];
+  if((mdata().reservas||[]).length || true){
     const resWrap = document.createElement('div');
     resWrap.style.cssText='margin-top:.6rem';
-    S.data.reservas.forEach((r,ri)=>{
+    (mdata().reservas||[]).forEach((r,ri)=>{
       const rrow=document.createElement('div');
       rrow.style.cssText='display:flex;align-items:center;gap:.4rem;padding:.2rem 0';
       const rn=document.createElement('span'); rn.style.cssText='flex:1;font-size:.75rem;font-weight:600;color:#5A4A6A'; rn.textContent='🔖 '+r.name;
       const ra=document.createElement('span'); ra.style.cssText="font-family:'Lora',serif;font-size:.8rem;font-weight:700;color:#A03030"; ra.textContent='–'+fmt(r.amount);
       const rd=document.createElement('button'); rd.style.cssText='background:none;border:none;color:rgba(0,0,0,.25);font-weight:700;cursor:pointer;font-size:.8rem;padding:0 .2rem';
-      rd.textContent='✕'; rd.addEventListener('click',()=>{ S.data.reservas.splice(ri,1); save(); render(); });
+      rd.textContent='✕'; rd.addEventListener('click',()=>{ mdata().reservas.splice(ri,1); save(); render(); });
       rrow.appendChild(rn); rrow.appendChild(ra); rrow.appendChild(rd);
       resWrap.appendChild(rrow);
     });
@@ -751,7 +794,7 @@ function rHome(c) {
     rab.addEventListener('click',()=>{
       const name=rni.value.trim(); const amt=Number(rai.value);
       if(!name||!amt) return;
-      S.data.reservas.push({id:Date.now(),name,amount:amt});
+      mdata().reservas.push({id:Date.now(),name,amount:amt});
       save(); render();
     });
     addR.appendChild(rni); addR.appendChild(rai); addR.appendChild(rab);
@@ -1906,7 +1949,7 @@ function rProjected(c) {
 function rFondos(c) {
   const root = div({cn:'view'});
   c.appendChild(root);
-  if (!S.data.reservas) S.data.reservas = [];
+  if (!mdata().reservas) mdata().reservas = [];
   if (!S.data.fondos) S.data.fondos = [
     {id:'f1', name:'Fondo Proyectados', icon:'🔮', color:'#C9A0DC', meta:0, aportes:[], retiros:[]},
     {id:'f2', name:'Fondo Verano',      icon:'☀️', color:'#FFB347', meta:0, aportes:[], retiros:[]},
