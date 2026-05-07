@@ -507,11 +507,12 @@ function rHome(c) {
   const projMes   = (S.data.projected||[]).filter(p=>!p.done&&p.targetMonth===mk()).reduce((s,p)=>s+p.amount,0);
   const resvTot   = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
 
-  // Sub-ítems tachados (✓ = ya lo pagué = se descuenta)
+  // Sub-ítems SIN tachar = pendientes de pago = se descuentan del disponible
+  // Sub-ítems tachados (✓) = ya pagados = no afectan (ya están en gastos)
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
     if(cat.name.toLowerCase().includes('miguel')) return;
-    (cat.subitems||[]).forEach(si=>{ if(si.paid && si.budget>0) siPagados += si.budget; });
+    (cat.subitems||[]).forEach(si=>{ if(!si.paid && si.budget>0) siPagados += si.budget; });
   });
 
   const bal       = inc - exp - paidFixed - fondosMes;
