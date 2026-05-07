@@ -505,8 +505,10 @@ function rHome(c) {
     s+(f.aportes||[]).filter(a=>a.date&&a.date.slice(0,7)===mk()).reduce((a2,ap)=>a2+ap.amount,0),0);
   const projMes     = S.data.projected.filter(p=>!p.done&&p.targetMonth===mk()).reduce((s,p)=>s+p.amount,0);
   const reservasTot = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
-  const subitemsPend = S.data.cats.reduce((s,cat)=>
-    s+(cat.subitems||[]).filter(si=>!si.paid).reduce((a,si)=>a+(si.budget||0),0),0);
+  const subitemsPend = S.data.cats.reduce((s,cat)=>{
+    if(cat.name.toLowerCase().includes('miguel')) return s;
+    return s+(cat.subitems||[]).filter(si=>!si.paid).reduce((a,si)=>a+(si.budget||0),0);
+  },0);
   const bal         = inc - exp - paidFixed - fondosMes;
   const disponible  = bal - pendFixed - projMes - reservasTot - subitemsPend;
   const totalFixed  = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
@@ -545,7 +547,7 @@ function rHome(c) {
   dispStrip.style.cssText='margin-top:.7rem;background:rgba(255,255,255,.55);border-radius:10px;padding:.5rem .8rem;display:flex;justify-content:space-between;align-items:center;cursor:pointer';
   const dispLbl = document.createElement('span');
   dispLbl.style.cssText='font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#5A4A6A';
-  dispLbl.textContent = disponible>=0 ? '✓ Disponible real' : '⚠️ Déficit proyectado';
+  dispLbl.textContent = (disponible>=0 ? '✓ Disponible real' : '⚠️ Déficit proyectado') + ' (click para desglose)';
   const dispVal = document.createElement('span');
   dispVal.style.cssText="font-family:'Lora',serif;font-size:1.1rem;font-weight:700;color:"+(disponible>=0?'#2A7050':'#A03030');
   dispVal.textContent = (disponible<0?'–':'')+fmt(Math.abs(disponible));
@@ -564,6 +566,13 @@ function rHome(c) {
   if(projMes>0)        dispDetail.appendChild(mkDRow('🔮 Proyectados este mes',projMes,true));
   if(subitemsPend>0)   dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',subitemsPend,true));
   if(reservasTot>0)    dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',reservasTot,true));
+  // Always show sub-items pending if any
+  if(subitemsPend>0){
+    const siRow=document.createElement('div');
+    siRow.style.cssText='margin-top:.35rem;font-size:.72rem;font-weight:700;color:#8B5BAE';
+    siRow.textContent='📋 Sub-ítems pendientes: –'+fmt(subitemsPend);
+    dispStrip.appendChild(siRow);
+  }
   dispStrip.addEventListener('click',()=>{
     dispDetail.style.display = dispDetail.style.display==='none'?'block':'none';
   });
@@ -1453,9 +1462,11 @@ create policy "allow_all" on mf_finanzas
         sni.addEventListener('input',e=>S.data.cats[i].subitems[j].name=e.target.value);
         const sai=document.createElement('input'); sai.className='subitem-amt'; sai.type='number'; sai.placeholder='$0'; sai.value=sub.budget||'';
         sai.addEventListener('input',e=>{
-          S.data.cats[i].subitems[j].budget=Number(e.target.value);
-          const tot=S.data.cats[i].subitems.reduce((s,x)=>s+(x.budget||0),0);
-          if(tot>0){S.data.cats[i].budget=tot;bInp.value=tot;}
+          const _ci2=i,_si2=j;
+          S.data.cats[_ci2].subitems[_si2].budget=Number(e.target.value);
+          const tot=S.data.cats[_ci2].subitems.reduce((s,x)=>s+(x.budget||0),0);
+          if(tot>0){S.data.cats[_ci2].budget=tot;bInp.value=tot;}
+          save(); // auto-save budget changes
         });
         // Paid toggle
         const spaid=document.createElement('button');
