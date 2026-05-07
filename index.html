@@ -514,58 +514,70 @@ function rHome(c) {
 
   // ── Calcular todo ──
   // ── Tarjeta semanal ──
-  const weeklyCatsHome = S.data.cats.filter(c=>c.freq==='semanal'&&(c.subitems||[]).length>0);
-  if(weeklyCatsHome.length>0){
-    const wn = getCurrentWeekNum(weeklyCatsHome[0].weekStart||'Lunes');
-    const wkey = getWeekKey(weeklyCatsHome[0].weekStart||'Lunes');
+  // Use the first weekly category's weekStart for the week number
+  const weeklyCatsAll = S.data.cats.filter(c=>c.freq==='semanal');
+  const refCat = weeklyCatsAll[0];
+  if(refCat){
     const today2 = new Date();
-    const weekStartDate = getWeekStartDate(today2, weeklyCatsHome[0].weekStart||'Lunes');
+    const startDay = refCat.weekStart||'Lunes';
+    const wn = getCurrentWeekNum(startDay);
+    const wkey = getWeekKey(startDay);
+    const weekStartDate = getWeekStartDate(today2, startDay);
     const weekEndDate = new Date(weekStartDate); weekEndDate.setDate(weekStartDate.getDate()+6);
     const wds = weekStartDate.toISOString().split('T')[0];
     const wde = weekEndDate.toISOString().split('T')[0];
 
-    // Build weekly items
     const tsItems = [];
-    let totalBudgetWeek = 0, totalSpentWeek = 0;
-    weeklyCatsHome.forEach(cat=>{
+    let totalBudget = 0, totalSpent = 0;
+
+    weeklyCatsAll.forEach(cat=>{
       if(cat.name.toLowerCase().includes('miguel')) return;
-      const subItem = (cat.subitems||[]).find(si=>si.name.toLowerCase().includes('semana '+wn));
-      const budget = subItem ? (subItem.budget||0) : 0;
+      // Find sub-item named exactly "Semana N" (exact match, case-insensitive)
+      const subItem = (cat.subitems||[]).find(si=>{
+        const n = si.name.trim().toLowerCase();
+        return n === 'semana '+wn || n.startsWith('semana '+wn+' ') || n.startsWith('semana '+wn+':');
+      });
+      // Also use category budget directly if no subitems but category is weekly
+      const budget = subItem ? (subItem.budget||0) : ((cat.subitems||[]).length===0 ? (cat.budget||0) : 0);
       if(!budget) return;
-      // Spending this week for this category
-      const spent = (mdata().expenses||[]).filter(e=>{
-        if(e.category!==cat.id) return false;
-        return e.date>=wds && e.date<=wde;
-      }).reduce((s,e)=>s+e.amount,0);
-      totalBudgetWeek += budget;
-      totalSpentWeek  += spent;
+
+      const wkMk = weekStartDate.getFullYear()+'-'+String(weekStartDate.getMonth()+1).padStart(2,'0');
+      const monthData2 = S.data.months[wkMk]||{income:[],expenses:[]};
+      // Also check current month in case week spans two months
+      const curMonthData = mdata();
+      const allExpenses2 = [...(monthData2.expenses||[])];
+      if(wkMk !== mk()) allExpenses2.push(...(curMonthData.expenses||[]));
+      const spent = allExpenses2
+        .filter(e=>e.category===cat.id && e.date>=wds && e.date<=wde)
+        .reduce((s,e)=>s+e.amount,0);
+
+      totalBudget += budget;
+      totalSpent  += spent;
       tsItems.push({cat,budget,spent,remain:budget-spent});
     });
 
-    if(totalBudgetWeek>0){
+    if(totalBudget>0){
       const tsCard = div({cn:'tarjeta-semanal'});
-
       const tshdr = div({cn:'ts-header'});
-      const tstitle = document.createElement('div'); tstitle.className='ts-title'; tstitle.textContent='💳 Tarjeta semanal';
-      const tswk = document.createElement('div'); tswk.className='ts-week'; tswk.textContent='Semana '+wn+' · '+wds.slice(5)+' → '+wde.slice(5);
+      const tstitle=document.createElement('div'); tstitle.className='ts-title'; tstitle.textContent='💳 Tarjeta semanal';
+      const tswk=document.createElement('div'); tswk.className='ts-week'; tswk.textContent='Semana '+wn+' · '+wds.slice(5)+' → '+wde.slice(5);
       tshdr.appendChild(tstitle); tshdr.appendChild(tswk);
       tsCard.appendChild(tshdr);
 
-      const remain = totalBudgetWeek - totalSpentWeek;
-      const pct = Math.min(100,(totalSpentWeek/totalBudgetWeek)*100);
-      const saldoEl = document.createElement('div'); saldoEl.className='ts-saldo';
-      saldoEl.textContent = (remain<0?'–':'')+fmt(Math.abs(remain));
+      const remain=totalBudget-totalSpent;
+      const saldoEl=document.createElement('div'); saldoEl.className='ts-saldo';
+      saldoEl.textContent=(remain<0?'–':'')+fmt(Math.abs(remain));
       if(remain<0) saldoEl.style.color='#A03030';
       tsCard.appendChild(saldoEl);
 
-      const subEl = document.createElement('div'); subEl.className='ts-sub';
-      subEl.textContent = fmt(totalSpentWeek)+' gastado de '+fmt(totalBudgetWeek)+' presupuestado';
+      const subEl=document.createElement('div'); subEl.className='ts-sub';
+      subEl.textContent=fmt(totalSpent)+' gastado de '+fmt(totalBudget)+' presupuestado esta semana';
       tsCard.appendChild(subEl);
 
-      const itemsEl = div({cn:'ts-items'});
+      const itemsEl=div({cn:'ts-items'});
       tsItems.forEach(({cat,budget,spent,remain:rem})=>{
-        const pct2 = Math.min(100,(spent/budget)*100);
-        const remCls = rem<0?'over':pct2>75?'warn':'ok';
+        const pct2=Math.min(100,budget>0?(spent/budget)*100:0);
+        const remCls=rem<0?'over':pct2>75?'warn':'ok';
         const row=div({cn:'ts-row'});
         const ico=document.createElement('span'); ico.className='ts-icon'; ico.textContent=cat.icon;
         const nm=document.createElement('span'); nm.className='ts-name'; nm.textContent=cat.name;
@@ -589,20 +601,24 @@ function rHome(c) {
   const projMes   = (S.data.projected||[]).filter(p=>!p.done&&p.targetMonth===mk()).reduce((s,p)=>s+p.amount,0);
   const resvTot   = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
 
-  // Sub-ítems pendientes = se descuentan del disponible
+  // Sub-ítems pendientes = todos los NO pagados se descuentan del disponible
+  // (tanto semanales como mensuales — representa todo lo que falta por pagar)
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
     (cat.subitems||[]).forEach(si=>{
-      if(si.budget<=0) return;
-      const isWeeklySub = cat.freq==='semanal' && si.name.toLowerCase().includes('semana');
-      if(isWeeklySub){
-        // Solo cuenta la semana actual
-        const wn = getCurrentWeekNum(cat.weekStart||'Lunes');
-        if(!si.name.toLowerCase().includes('semana '+wn)) return;
-        const wkey = getWeekKey(cat.weekStart||'Lunes');
-        if(si.paidWeek !== wkey) siPagados += si.budget; // no pagada esta semana
+      if((si.budget||0)<=0) return;
+      const isWeekly = cat.freq==='semanal' && si.name.toLowerCase().includes('semana');
+      if(isWeekly){
+        // Para semanales: verificar si está pagada esta semana específica
+        const wn2 = getCurrentWeekNum(cat.weekStart||'Lunes');
+        const wkey2 = getWeekKey(cat.weekStart||'Lunes');
+        // Solo descuenta sub-ítems de semanas que aún no han pasado O la actual si no está pagada
+        const siWn = parseInt((si.name.match(/semana\s+(\d)/i)||[])[1]||'0');
+        if(siWn < wn2) return; // semana pasada, ya no cuenta
+        if(siWn === wn2 && si.paidWeek === wkey2) return; // semana actual pagada
+        siPagados += si.budget;
       } else {
-        if(!si.paid) siPagados += si.budget; // sub-ítem normal no pagado
+        if(!si.paid) siPagados += si.budget;
       }
     });
   });
