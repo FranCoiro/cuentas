@@ -560,13 +560,10 @@ function rHome(c) {
     const v=document.createElement('span'); v.style.color=neg?'#A03030':'#2A7050'; v.textContent=(neg?'– ':'')+fmt(val);
     row.appendChild(l); row.appendChild(v); return row;
   };
-  if(pendFixed>0)   dispDetail.appendChild(mkDRow('📌 Fijos por pagar',pendFixed,true));
-  if(projMes>0)     dispDetail.appendChild(mkDRow('🔮 Proyectados este mes',projMes,true));
-  const subPend = S.data.cats.reduce((s,cat)=>{
-    return s+(cat.subitems||[]).filter(si=>!si.paid).reduce((a,si)=>a+(si.budget||0),0);
-  },0);
-  if(subPend>0)     dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',subPend,true));
-  if(reservasTot>0) dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',reservasTot,true));
+  if(pendFixed>0)      dispDetail.appendChild(mkDRow('📌 Fijos por pagar',pendFixed,true));
+  if(projMes>0)        dispDetail.appendChild(mkDRow('🔮 Proyectados este mes',projMes,true));
+  if(subitemsPend>0)   dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',subitemsPend,true));
+  if(reservasTot>0)    dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',reservasTot,true));
   dispStrip.addEventListener('click',()=>{
     dispDetail.style.display = dispDetail.style.display==='none'?'block':'none';
   });
@@ -1467,11 +1464,13 @@ create policy "allow_all" on mf_finanzas
         spaid.style.color=sub.paid?'#2A7050':'#D0C0E0';
         spaid.textContent=sub.paid?'✓':'○';
         spaid.title=sub.paid?'Marcar pendiente':'Marcar pagado';
+        const _ci = i, _si = j;
         spaid.addEventListener('click',()=>{
-          S.data.cats[i].subitems[j].paid=!S.data.cats[i].subitems[j].paid;
-          save();
-          renderSubs();
-          render();
+          if(S.data.cats[_ci] && S.data.cats[_ci].subitems[_si] !== undefined){
+            S.data.cats[_ci].subitems[_si].paid = !S.data.cats[_ci].subitems[_si].paid;
+            save();
+            renderSubs();
+          }
         });
         const sdel=document.createElement('button'); sdel.className='subitem-del'; sdel.textContent='✕';
         sdel.addEventListener('click',()=>{S.data.cats[i].subitems.splice(j,1);renderSubs();});
