@@ -507,11 +507,22 @@ function rHome(c) {
   const projMes   = (S.data.projected||[]).filter(p=>!p.done&&p.targetMonth===mk()).reduce((s,p)=>s+p.amount,0);
   const resvTot   = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
 
-  // Sub-ítems SIN tachar = pendientes de pago = se descuentan del disponible
-  // Sub-ítems tachados (✓) = ya pagados = no afectan
+  // Sub-ítems pendientes = se descuentan del disponible
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
-    (cat.subitems||[]).forEach(si=>{ if(!si.paid && si.budget>0) siPagados += si.budget; });
+    (cat.subitems||[]).forEach(si=>{
+      if(si.budget<=0) return;
+      const isWeeklySub = cat.freq==='semanal' && si.name.toLowerCase().includes('semana');
+      if(isWeeklySub){
+        // Solo cuenta la semana actual
+        const wn = getCurrentWeekNum(cat.weekStart||'Lunes');
+        if(!si.name.toLowerCase().includes('semana '+wn)) return;
+        const wkey = getWeekKey(cat.weekStart||'Lunes');
+        if(si.paidWeek !== wkey) siPagados += si.budget; // no pagada esta semana
+      } else {
+        if(!si.paid) siPagados += si.budget; // sub-ítem normal no pagado
+      }
+    });
   });
 
   const bal       = inc - exp - paidFixed - fondosMes;
@@ -789,6 +800,50 @@ function rHome(c) {
         tile.appendChild(div({cn:'ct-track'},[div({cn:'ct-fill',style:{width:pct+'%',background:over?'#E05050':cat.color}})]));
         tile.appendChild(div({cn:remCls},[over ? '¡Excedido en '+fmt(Math.abs(rem))+'!' : 'Quedan '+fmt(rem)]));
       }
+      // For weekly categories: show current week sub-item
+      if(cat.freq==='semanal' && (cat.subitems||[]).length>0){
+        const wn = getCurrentWeekNum(cat.weekStart||'Lunes');
+        const wkey = getWeekKey(cat.weekStart||'Lunes');
+        const catIdx = S.data.cats.findIndex(c=>c.id===cat.id);
+        const weekSub = (cat.subitems||[]).find(si=>si.name.toLowerCase().includes('semana '+wn));
+        if(weekSub){
+          const subIdx = cat.subitems.findIndex(si=>si.id===weekSub.id);
+          const isPaid = weekSub.paidWeek===wkey;
+          const subRow=document.createElement('div');
+          subRow.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-top:.4rem;background:rgba(255,255,255,.6);border-radius:8px;padding:.35rem .6rem';
+          const subName=document.createElement('span'); subName.style.cssText='font-size:.75rem;font-weight:700;color:#5A4A6A';
+          subName.style.textDecoration=isPaid?'line-through':'none';
+          subName.textContent='Semana '+wn+': '+fmt(weekSub.budget||0);
+          const subBtn=document.createElement('button');
+          subBtn.style.cssText='font-size:.8rem;font-weight:800;padding:.2rem .55rem;border-radius:15px;border:2px solid;cursor:pointer;background:#FFF;flex-shrink:0';
+          subBtn.style.borderColor=isPaid?'#77DD77':'#D0C0E0';
+          subBtn.style.color=isPaid?'#2A7050':'#B0A0C0';
+          subBtn.textContent=isPaid?'✓':'○';
+          subBtn.addEventListener('click',e=>{
+            e.stopPropagation();
+            if(catIdx>=0 && subIdx>=0){
+              const nowPaid = S.data.cats[catIdx].subitems[subIdx].paidWeek===wkey;
+              S.data.cats[catIdx].subitems[subIdx].paidWeek = nowPaid ? null : wkey;
+              save(); render();
+            }
+          });
+          subRow.appendChild(subName); subRow.appendChild(subBtn);
+          tile.appendChild(subRow);
+        } else if(wn>=5){
+          // Week 5 alert — no sub-item configured
+          const w5row=document.createElement('div');
+          w5row.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-top:.4rem;background:#FFF9E0;border:1.5px solid #FFE066;border-radius:8px;padding:.35rem .6rem;gap:.5rem';
+          const w5lbl=document.createElement('span'); w5lbl.style.cssText='font-size:.72rem;font-weight:700;color:#A08000;flex:1';
+          w5lbl.textContent='⚠️ Semana 5 — no configurada';
+          const w5btn=document.createElement('button');
+          w5btn.style.cssText='font-size:.7rem;font-weight:800;padding:.25rem .6rem;border-radius:12px;border:none;background:#FFB347;color:#FFF;cursor:pointer;white-space:nowrap';
+          w5btn.textContent='+ Agregar en Ajustes';
+          w5btn.addEventListener('click',e=>{ e.stopPropagation(); go('settings'); });
+          w5row.appendChild(w5lbl); w5row.appendChild(w5btn);
+          tile.appendChild(w5row);
+        }
+      }
+
       // Click to expand expenses
       const detail = document.createElement('div');
       detail.style.cssText='display:none;margin-top:.6rem;border-top:1.5px solid rgba(0,0,0,.08);padding-top:.5rem';
@@ -1909,6 +1964,47 @@ function rDeseos(c) {
     wcard.appendChild(pBadge); wcard.appendChild(info); wcard.appendChild(doneBtn); wcard.appendChild(delBtn);
     root.appendChild(wcard);
   });
+}
+
+// ═══════════════════════════════════════════════
+// WEEK HELPERS
+// ═══════════════════════════════════════════════
+const DAY_MAP = {Lunes:1,Martes:2,'Miércoles':3,Jueves:4,Viernes:5,'Sábado':6,Domingo:0};
+
+function getWeekStartDate(ref, startDayName) {
+  const startDay = DAY_MAP[startDayName] !== undefined ? DAY_MAP[startDayName] : 1;
+  const d = new Date(ref);
+  const dow = d.getDay();
+  const diff = (dow - startDay + 7) % 7;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - diff);
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+
+function getCurrentWeekNum(startDayName) {
+  // Returns 1-4 (or 5) based on which week of the month we're in
+  const today = new Date();
+  const weekStart = getWeekStartDate(today, startDayName||'Lunes');
+  // Find first week start of this month
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  let cursor = getWeekStartDate(firstDay, startDayName||'Lunes');
+  // If cursor is before the 1st of the month, move forward one week
+  if (cursor.getMonth() < today.getMonth() || cursor.getFullYear() < today.getFullYear()) {
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  let week = 1;
+  while (cursor < weekStart) {
+    cursor.setDate(cursor.getDate() + 7);
+    week++;
+  }
+  return week;
+}
+
+function getWeekKey(startDayName) {
+  const today = new Date();
+  const wn = getCurrentWeekNum(startDayName);
+  return today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-W'+wn;
 }
 
 // ═══════════════════════════════════════════════
