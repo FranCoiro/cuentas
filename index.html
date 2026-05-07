@@ -639,20 +639,14 @@ function rHome(c) {
 
   // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
   // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
+  // Sub-ítems pendientes: los no marcados como pagados este mes
+  const paidSubs = mdata().paidSubs || {};
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
-      const n = si.name.trim().toLowerCase();
-      const isWeekly = n.startsWith('semana ');
-      let isPaid = false;
-      if(isWeekly){
-        const catWkey = getWeekKey(cat.weekStart||'Lunes');
-        isPaid = si.paidWeek === catWkey;
-      } else {
-        isPaid = !!si.paid;
-      }
-      if(!isPaid) siPagados += si.budget;
+      const key = cat.id+'__'+si.id;
+      if(!paidSubs[key]) siPagados += si.budget;
     });
   });
 
@@ -755,27 +749,7 @@ function rHome(c) {
   };
   if(pendFixed>0)      dispDetail.appendChild(mkDRow('📌 Fijos por pagar',pendFixed,true));
   if(projMes>0)        dispDetail.appendChild(mkDRow('🔮 Proyectados este mes',projMes,true));
-  if(siPagados>0){
-    dispDetail.appendChild(mkDRow('📋 Sub-ítems pendientes',siPagados,true));
-    // Show detail of which sub-items
-    const siDetail=document.createElement('div'); siDetail.style.cssText='margin-left:.5rem;margin-top:.2rem';
-    (S.data.cats||[]).forEach(cat=>{
-      (cat.subitems||[]).forEach(si=>{
-        if((si.budget||0)<=0) return;
-        const n2=si.name.trim().toLowerCase();
-        const isW=n2.startsWith('semana ');
-        let isPd=false;
-        if(isW){ const ck=getWeekKey(cat.weekStart||'Lunes'); isPd=si.paidWeek===ck; }
-        else { isPd=!!si.paid; }
-        if(!isPd){
-          const r=document.createElement('div'); r.style.cssText='font-size:.65rem;color:#8A6A6A;padding:.05rem 0';
-          r.textContent='  · '+cat.name+': '+si.name+' –'+fmt(si.budget);
-          siDetail.appendChild(r);
-        }
-      });
-    });
-    dispDetail.appendChild(siDetail);
-  }
+  if(siPagados>0)   dispDetail.appendChild(mkDRow('📋 Compromisos pendientes',siPagados,true));
   if(resvTot>0)    dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',resvTot,true));
   dispStrip.addEventListener('click',()=>{
     dispDetail.style.display = dispDetail.style.display==='none'?'block':'none';
@@ -1312,7 +1286,9 @@ function rFixed(c) {
   // Summary totals
   const totalFixed = S.data.fixed.reduce((s,f) => s+f.amount, 0);
   const paidAmt    = S.data.fixed.filter(f=>f[paidKey]).reduce((s,f) => s+f.amount, 0);
-  const pendAmt    = totalFixed - paidAmt;
+  const totalSubs  = subItemsList.reduce((s,si)=>s+si.amount,0);
+  const paidSubsAmt= subItemsList.filter(si=>si.paid).reduce((s,si)=>s+si.amount,0);
+  const pendAmt    = (totalFixed - paidAmt) + (totalSubs - paidSubsAmt);
 
   if (S.data.fixed.length) {
     const sumRow = div({style:{display:'flex',gap:'.5rem',marginBottom:'1rem'}});
@@ -1332,6 +1308,62 @@ function rFixed(c) {
     });
     root.appendChild(sumRow);
   }
+
+  // Build combined list: fixed expenses + sub-items
+  if(!mdata().paidSubs) mdata().paidSubs={};
+  const paidSubsRef = mdata().paidSubs;
+
+  // Sub-items from all categories
+  const subItemsList = [];
+  (S.data.cats||[]).forEach(cat=>{
+    (cat.subitems||[]).forEach(si=>{
+      if((si.budget||0)<=0) return;
+      subItemsList.push({
+        id: cat.id+'__'+si.id,
+        icon: cat.icon,
+        name: cat.name+' → '+si.name,
+        amount: si.budget,
+        isSubitem: true,
+        paid: !!paidSubsRef[cat.id+'__'+si.id]
+      });
+    });
+  });
+
+  // Show sub-items section
+  if(subItemsList.length){
+    const siHdr=document.createElement('div'); siHdr.style.cssText='font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:1rem 0 .5rem';
+    siHdr.textContent='📋 Compromisos por categoría';
+    root.appendChild(siHdr);
+
+    const siSorted=[...subItemsList].sort((a,b)=>(a.paid===b.paid?0:a.paid?1:-1));
+    siSorted.forEach(si=>{
+      const card=document.createElement('div');
+      card.className='fixed-card'+(si.paid?' paid':'');
+      const info=document.createElement('div'); info.className='fc-info';
+      const nm=document.createElement('div'); nm.className='fc-name'; nm.textContent=si.icon+' '+si.name;
+      if(si.paid) nm.style.textDecoration='line-through';
+      info.appendChild(nm);
+      card.appendChild(info);
+      const amtEl=document.createElement('div'); amtEl.className='fc-amt'; amtEl.textContent=fmt(si.amount);
+      card.appendChild(amtEl);
+      const pb=document.createElement('button'); pb.className='pay-btn '+(si.paid?'paid':'unpaid');
+      pb.textContent=si.paid?'✓ Pagado':'Marcar pagado';
+      pb.addEventListener('click',()=>{
+        if(!mdata().paidSubs) mdata().paidSubs={};
+        mdata().paidSubs[si.id]=!mdata().paidSubs[si.id];
+        save(); render();
+      });
+      card.appendChild(pb);
+      root.appendChild(card);
+    });
+
+    const siDivider=document.createElement('div'); siDivider.style.cssText='border-top:2px dashed var(--border);margin:1rem 0 .5rem';
+    root.appendChild(siDivider);
+  }
+
+  const siHdr2=document.createElement('div'); siHdr2.style.cssText='font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:.5rem';
+  siHdr2.textContent='📌 Gastos fijos recurrentes';
+  root.appendChild(siHdr2);
 
   // Fixed items list — unpaid first, paid at bottom
   const fixedSorted = S.data.fixed.map((f,i)=>({...f,_i:i})).sort((a,b)=>{
@@ -1765,32 +1797,7 @@ create policy "allow_all" on mf_finanzas
           if(tot>0){S.data.cats[_ci2].budget=tot;bInp.value=tot;}
           save(); // auto-save budget changes
         });
-        // Paid toggle
-        const spaid=document.createElement('button');
-        spaid.style.cssText='font-size:.85rem;background:none;border:2px solid;border-radius:8px;padding:.15rem .4rem;cursor:pointer;flex-shrink:0;min-height:28px;font-weight:800;transition:all .2s';
-        spaid.style.borderColor=sub.paid?'#77DD77':'#D0C0E0';
-        spaid.style.color=sub.paid?'#2A7050':'#D0C0E0';
-        spaid.textContent=sub.paid?'✓':'○';
-        spaid.title=sub.paid?'Marcar pendiente':'Marcar pagado';
-        const _ci = i, _si = j;
-        spaid.addEventListener('click',()=>{
-          if(S.data.cats[_ci] && S.data.cats[_ci].subitems[_si] !== undefined){
-            S.data.cats[_ci].subitems[_si].paid = !S.data.cats[_ci].subitems[_si].paid;
-            save();
-            // Update button visually without full re-render
-            const nowPaid = S.data.cats[_ci].subitems[_si].paid;
-            spaid.textContent = nowPaid ? '✓' : '○';
-            spaid.style.borderColor = nowPaid ? '#77DD77' : '#D0C0E0';
-            spaid.style.color = nowPaid ? '#2A7050' : '#D0C0E0';
-            sni.style.textDecoration = nowPaid ? 'line-through' : 'none';
-            // Refresh home view so disponible updates live
-            // We stay in settings but update the background state
-            // User will see update when going to Inicio
-          }
-        });
-        const sdel=document.createElement('button'); sdel.className='subitem-del'; sdel.textContent='✕';
-        sdel.addEventListener('click',()=>{S.data.cats[i].subitems.splice(j,1);renderSubs();});
-        sr.appendChild(sni);sr.appendChild(sai);sr.appendChild(spaid);sr.appendChild(sdel);
+        sr.appendChild(sni);sr.appendChild(sai);sr.appendChild(sdel);
         subList.appendChild(sr);
       });
     }
