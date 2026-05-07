@@ -515,14 +515,17 @@ function rHome(c) {
   // ── Calcular todo ──
   // ── Tarjeta semanal ──
   // Use the first weekly category's weekStart for the week number
+  const weekOffset = S.data._weekOffset || 0; // 0=current, -1=prev, +1=next
   const weeklyCatsAll = S.data.cats.filter(c=>c.freq==='semanal');
   const refCat = weeklyCatsAll[0];
   if(refCat){
     const today2 = new Date();
     const startDay = refCat.weekStart||'Lunes';
-    const wn = getCurrentWeekNum(startDay);
+    // Apply offset
+    const refDate = new Date(today2); refDate.setDate(today2.getDate() + weekOffset*7);
+    const wn = getCurrentWeekNum(startDay); // always show week number based on today for label
     const wkey = getWeekKey(startDay);
-    const weekStartDate = getWeekStartDate(today2, startDay);
+    const weekStartDate = getWeekStartDate(refDate, startDay);
     const weekEndDate = new Date(weekStartDate); weekEndDate.setDate(weekStartDate.getDate()+6);
     const wds = weekStartDate.toISOString().split('T')[0];
     const wde = weekEndDate.toISOString().split('T')[0];
@@ -571,8 +574,17 @@ function rHome(c) {
       const tsCard = div({cn:'tarjeta-semanal'});
       const tshdr = div({cn:'ts-header'});
       const tstitle=document.createElement('div'); tstitle.className='ts-title'; tstitle.textContent='💳 Tarjeta semanal';
-      const tswk=document.createElement('div'); tswk.className='ts-week'; tswk.textContent='Semana '+wn+' · '+wds.slice(5)+' → '+wde.slice(5);
-      tshdr.appendChild(tstitle); tshdr.appendChild(tswk);
+      // Week nav
+      const wnav=document.createElement('div'); wnav.style.cssText='display:flex;align-items:center;gap:.3rem';
+      const wprev=document.createElement('button'); wprev.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wprev.textContent='←';
+      wprev.addEventListener('click',()=>{ S.data._weekOffset=(S.data._weekOffset||0)-1; save(); render(); });
+      const wnext=document.createElement('button'); wnext.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wnext.textContent='→';
+      wnext.addEventListener('click',()=>{ S.data._weekOffset=(S.data._weekOffset||0)+1; save(); render(); });
+      const wlabel=document.createElement('div'); wlabel.className='ts-week';
+      const offsetLabel = weekOffset===0?'Esta semana':weekOffset<0?'Hace '+(Math.abs(weekOffset))+' sem':'En '+weekOffset+' sem';
+      wlabel.textContent=offsetLabel+' · '+wds.slice(5)+' → '+wde.slice(5);
+      wnav.appendChild(wprev); wnav.appendChild(wlabel); wnav.appendChild(wnext);
+      tshdr.appendChild(tstitle); tshdr.appendChild(wnav);
       tsCard.appendChild(tshdr);
 
       const remain=totalBudget-totalSpent;
@@ -1811,6 +1823,8 @@ create policy "allow_all" on mf_finanzas
           if(tot>0){S.data.cats[_ci2].budget=tot;bInp.value=tot;}
           save(); // auto-save budget changes
         });
+        const sdel=document.createElement('button'); sdel.className='subitem-del'; sdel.textContent='✕';
+        sdel.addEventListener('click',()=>{S.data.cats[i].subitems.splice(j,1); save(); render();});
         sr.appendChild(sni);sr.appendChild(sai);sr.appendChild(sdel);
         subList.appendChild(sr);
       });
