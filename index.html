@@ -1579,6 +1579,7 @@ function buildWeekHistory(cat) {
 // SETTINGS VIEW
 // ═══════════════════════════════════════════════
 function rSettings(c) {
+  try {
   const root = div({cn:'view'});
   c.appendChild(root);
   root.appendChild(h2e({cn:'page-title'},['Ajustes']));
@@ -1869,6 +1870,7 @@ create policy "allow_all" on mf_finanzas
   btnRow2.appendChild(expBtn); btnRow2.appendChild(fileInp2); btnRow2.appendChild(impBtn);
   expSec.appendChild(btnRow2);
   root.appendChild(expSec);
+  } catch(e){ console.error("rSettings error:", e); c.innerHTML="<p style='color:red;padding:1rem'>Error en Ajustes: "+e.message+"</p>"; }
 }
 
 // ═══════════════════════════════════════════════
