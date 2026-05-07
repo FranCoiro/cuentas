@@ -541,15 +541,26 @@ function rHome(c) {
       const budget = subItem ? (subItem.budget||0) : ((cat.subitems||[]).length===0 ? (cat.budget||0) : 0);
       if(!budget) return;
 
-      // Just use actual recorded expenses for this week
+      // Actual recorded expenses this week
       const wkMk = weekStartDate.getFullYear()+'-'+String(weekStartDate.getMonth()+1).padStart(2,'0');
       const monthData2 = S.data.months[wkMk]||{income:[],expenses:[]};
       const curMonthData = mdata();
       const allExpenses2 = [...(monthData2.expenses||[])];
       if(wkMk !== mk()) allExpenses2.push(...(curMonthData.expenses||[]));
-      const spent = allExpenses2
+      const actualSpentWeek = allExpenses2
         .filter(e=>e.category===cat.id && e.date>=wds && e.date<=wde)
         .reduce((s,e)=>s+e.amount,0);
+      // Also count sub-item marked as paid in Fijos for this week
+      const paidSubsNow = mdata().paidSubs || {};
+      const paidSubAmt = (cat.subitems||[]).reduce((s,si)=>{
+        const n = si.name.trim().toLowerCase();
+        if(!n.startsWith('semana ')) return s;
+        const siWn = parseInt(n.replace('semana ',''));
+        if(siWn !== wn) return s;
+        const key = cat.id+'__'+si.id;
+        return s + (paidSubsNow[key] ? (si.budget||0) : 0);
+      },0);
+      const spent = Math.max(actualSpentWeek, paidSubAmt);
 
       totalBudget += budget;
       totalSpent  += spent;
