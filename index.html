@@ -541,24 +541,15 @@ function rHome(c) {
       const budget = subItem ? (subItem.budget||0) : ((cat.subitems||[]).length===0 ? (cat.budget||0) : 0);
       if(!budget) return;
 
+      // Just use actual recorded expenses for this week
       const wkMk = weekStartDate.getFullYear()+'-'+String(weekStartDate.getMonth()+1).padStart(2,'0');
       const monthData2 = S.data.months[wkMk]||{income:[],expenses:[]};
       const curMonthData = mdata();
       const allExpenses2 = [...(monthData2.expenses||[])];
       if(wkMk !== mk()) allExpenses2.push(...(curMonthData.expenses||[]));
-      // Actual recorded expenses this week for this category
-      const actualSpent = allExpenses2
+      const spent = allExpenses2
         .filter(e=>e.category===cat.id && e.date>=wds && e.date<=wde)
         .reduce((s,e)=>s+e.amount,0);
-      // Count ticked sub-items using THIS category's own weekStart
-      const catWkey = getWeekKey(cat.weekStart||startDay);
-      const catWn   = getCurrentWeekNum(cat.weekStart||startDay);
-      const tickedAmt = (cat.subitems||[]).reduce((s,si)=>{
-        const n = si.name.trim().toLowerCase();
-        if(n !== 'semana '+catWn) return s;
-        return s + (si.paidWeek===catWkey ? (si.budget||0) : 0);
-      },0);
-      const spent = Math.max(actualSpent, tickedAmt);
 
       totalBudget += budget;
       totalSpent  += spent;
@@ -652,11 +643,12 @@ function rHome(c) {
   (S.data.cats||[]).forEach(cat=>{
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
-      const isWeeklyNamed = /^semana\s*\d/i.test(si.name.trim());
+      const n = si.name.trim().toLowerCase();
+      const isWeekly = n.startsWith('semana ');
       let isPaid = false;
-      if(isWeeklyNamed && si.paidWeek){
-        const wkey2 = getWeekKey(cat.weekStart||'Lunes');
-        isPaid = si.paidWeek === wkey2;
+      if(isWeekly){
+        const catWkey = getWeekKey(cat.weekStart||'Lunes');
+        isPaid = si.paidWeek === catWkey;
       } else {
         isPaid = !!si.paid;
       }
