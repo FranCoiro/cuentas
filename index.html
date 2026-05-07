@@ -507,7 +507,7 @@ function rHome(c) {
   const reservasTot = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
   const subitemsPend = S.data.cats.reduce((s,cat)=>{
     if(cat.name.toLowerCase().includes('miguel')) return s;
-    return s+(cat.subitems||[]).filter(si=>!si.paid).reduce((a,si)=>a+(si.budget||0),0);
+    return s+(cat.subitems||[]).filter(si=>si.paid).reduce((a,si)=>a+(si.budget||0),0);
   },0);
   const bal         = inc - exp - paidFixed - fondosMes;
   const disponible  = bal - pendFixed - projMes - reservasTot - subitemsPend;
@@ -549,6 +549,7 @@ function rHome(c) {
   dispLbl.style.cssText='font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#5A4A6A';
   dispLbl.textContent = (disponible>=0 ? '✓ Disponible real' : '⚠️ Déficit proyectado') + ' (click para desglose)';
   const dispVal = document.createElement('span');
+  dispVal.className = 'disp-strip-val';
   dispVal.style.cssText="font-family:'Lora',serif;font-size:1.1rem;font-weight:700;color:"+(disponible>=0?'#2A7050':'#A03030');
   dispVal.textContent = (disponible<0?'–':'')+fmt(Math.abs(disponible));
   dispStrip.appendChild(dispLbl); dispStrip.appendChild(dispVal);
@@ -1480,7 +1481,15 @@ create policy "allow_all" on mf_finanzas
           if(S.data.cats[_ci] && S.data.cats[_ci].subitems[_si] !== undefined){
             S.data.cats[_ci].subitems[_si].paid = !S.data.cats[_ci].subitems[_si].paid;
             save();
-            renderSubs();
+            // Update button visually without full re-render
+            const nowPaid = S.data.cats[_ci].subitems[_si].paid;
+            spaid.textContent = nowPaid ? '✓' : '○';
+            spaid.style.borderColor = nowPaid ? '#77DD77' : '#D0C0E0';
+            spaid.style.color = nowPaid ? '#2A7050' : '#D0C0E0';
+            sni.style.textDecoration = nowPaid ? 'line-through' : 'none';
+            // Refresh home view so disponible updates live
+            // We stay in settings but update the background state
+            // User will see update when going to Inicio
           }
         });
         const sdel=document.createElement('button'); sdel.className='subitem-del'; sdel.textContent='✕';
