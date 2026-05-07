@@ -1725,9 +1725,9 @@ create policy "allow_all" on mf_finanzas
         const nWeeks = ((S.data.cats[i].subitems||[]).length >= 5) ? 4 : 5;
         const weekBudget = S.data.cats[i].budget || 0;
         const perWeek = weekBudget > 0 ? Math.round(weekBudget/nWeeks) : 0;
-        S.data.cats[i].subitems = Array.from({length:nWeeks},(_,idx)=>({
-          id: Date.now()+idx+1,
-          name: 'Semana '+(idx+1),
+        S.data.cats[i].subitems = Array.from({length:nWeeks},(_,wi)=>({
+          id: Date.now()+wi+1,
+          name: 'Semana '+(wi+1),
           budget: perWeek,
           paid: false,
           paidWeek: null
