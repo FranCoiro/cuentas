@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Mis Finanzas 💜</title>
+<title>Fran y Miguel 💜</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Lora:wght@600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -33,7 +33,7 @@ input{outline:none}
   body{background:linear-gradient(135deg,#F5EEFF 0%,#EAF6FF 50%,#EDFAF5 100%);min-height:100vh}
   #app{flex-direction:row;max-width:1100px;min-height:100vh;margin:0 auto;background:none}
   .bnav{position:fixed;left:max(0px,calc(50vw - 550px));top:0;bottom:auto;width:200px;max-width:200px;height:100vh;flex-direction:column;border-top:none;border-right:2px solid var(--border);background:#fff;padding:2rem 0 1rem;box-shadow:4px 0 20px rgba(180,127,222,.08);align-items:stretch;justify-content:flex-start;gap:.2rem;transform:none}
-  .bnav::before{content:"mis finanzas 💜";font-family:"Lora",serif;font-size:1.05rem;font-weight:700;color:var(--text);padding:0 1.4rem 1.5rem;display:block;border-bottom:2px solid var(--border);margin-bottom:.5rem}
+  .bnav::before{content:"Fran y Miguel 💜";font-family:"Lora",serif;font-size:1.05rem;font-weight:700;color:var(--text);padding:0 1.4rem 1.5rem;display:block;border-bottom:2px solid var(--border);margin-bottom:.5rem}
   .ni{flex:none;flex-direction:row;justify-content:flex-start;gap:.75rem;padding:.7rem 1.4rem;border-radius:0;min-height:48px}
   .ni.active{background:var(--purple-light);color:var(--purple);position:relative}
   .ni.active::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--purple);border-radius:0 3px 3px 0}
@@ -508,10 +508,9 @@ function rHome(c) {
   const resvTot   = (S.data.reservas||[]).reduce((s,r)=>s+r.amount,0);
 
   // Sub-ítems SIN tachar = pendientes de pago = se descuentan del disponible
-  // Sub-ítems tachados (✓) = ya pagados = no afectan (ya están en gastos)
+  // Sub-ítems tachados (✓) = ya pagados = no afectan
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
-    if(cat.name.toLowerCase().includes('miguel')) return;
     (cat.subitems||[]).forEach(si=>{ if(!si.paid && si.budget>0) siPagados += si.budget; });
   });
 
