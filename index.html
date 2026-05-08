@@ -1723,8 +1723,8 @@ function rFondos(c) {
   addFondoBtn.className='ghost-btn'; addFondoBtn.style.cssText='width:100%;margin-top:.5rem';
   addFondoBtn.textContent='+ Crear nuevo fondo';
   addFondoBtn.addEventListener('click',()=>{
-    const name=prompt('Nombre del fondo:'); if(!name) return;
-    const meta=Number(prompt('Meta en pesos (0 si no tenés meta):')||0);
+    const name='Fondo '+((S.data.fondos||[]).length+1); if(!name) return;
+    const meta=0;
     const icons=['💡','🎯','🌟','💎','🚀','🏖️','🎓','🏥'];
     const colors=['#FF9AA2','#87CEEB','#B5EAD7','#FDFD96','#C9A0DC','#FFB347','#7EC8C8','#AEC6CF'];
     const idx2=S.data.fondos.length%icons.length;
@@ -1871,6 +1871,176 @@ function getWeekKey(startDayName) {
   const today = new Date();
   const wn = getCurrentWeekNum(startDayName);
   return today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-W'+wn;
+}
+
+
+// ═══════════════════════════════════════════════
+// SETTINGS VIEW
+// ═══════════════════════════════════════════════
+function rSettings(c) {
+  try {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+  root.appendChild(h2e({cn:'page-title'},['Ajustes']));
+
+  // ── Supabase ──
+  const sbSec = div({cn:'set-sec'});
+  sbSec.appendChild(div({cn:'set-sec-title'},['☁️ Base de datos (Supabase)']));
+  const dotColor = SB_STATUS==='ok'?'status-ok':SB_STATUS==='error'?'status-err':'status-none';
+  const dotLbl = SB_STATUS==='ok'?'Conectado':SB_STATUS==='error'?'Error de conexión':'No configurado';
+  const statusEl = document.createElement('div'); statusEl.style.cssText='font-size:.78rem;font-weight:700;margin-bottom:.8rem;color:var(--muted)';
+  const dot = document.createElement('span'); dot.className='status-dot '+dotColor;
+  statusEl.appendChild(dot); statusEl.appendChild(document.createTextNode(dotLbl));
+  sbSec.appendChild(statusEl);
+  const urlInp = inp({cn:'sb-input',type:'url',placeholder:'https://xxxx.supabase.co',value:SB_URL});
+  const keyInp = inp({cn:'sb-input',type:'password',placeholder:'anon public key',value:SB_KEY});
+  sbSec.appendChild(pe({cn:'sub',style:{marginBottom:'.5rem'}},['Pegá tu URL y clave anon de Supabase:']));
+  sbSec.appendChild(urlInp); sbSec.appendChild(keyInp);
+  const saveDbBtn = document.createElement('button'); saveDbBtn.className='save-btn sb'; saveDbBtn.style.marginBottom='.7rem'; saveDbBtn.textContent='Guardar y conectar';
+  saveDbBtn.addEventListener('click', async()=>{
+    SB_URL=urlInp.value.trim(); SB_KEY=keyInp.value.trim();
+    localStorage.setItem('mf_sb_url',SB_URL); localStorage.setItem('mf_sb_key',SB_KEY);
+    saveDbBtn.textContent='⏳ Probando...'; await saveSB();
+    saveDbBtn.textContent=SB_STATUS==='ok'?'✓ Conectado':'✗ Error';
+    setTimeout(()=>{saveDbBtn.textContent='Guardar y conectar';render();},1500);
+  });
+  sbSec.appendChild(saveDbBtn);
+  const syncNote=document.createElement('div'); syncNote.className='sub'; syncNote.style.cssText='margin-top:.5rem;padding:.5rem;background:#F0E6FF;border-radius:8px';
+  syncNote.textContent='✓ Sincronización automática — todos tus dispositivos comparten los mismos datos.';
+  sbSec.appendChild(syncNote);
+  root.appendChild(sbSec);
+
+  // ── Categories ──
+  const catSec = div({cn:'set-sec'});
+  catSec.appendChild(div({cn:'set-sec-title'},['📂 Categorías']));
+  catSec.appendChild(pe({cn:'sub',style:{marginBottom:'.8rem'}},['Nombre, emoji, frecuencia y presupuesto. Las semanales tienen día de inicio.']));
+
+  const EMOJIS_LIST=['🛒','🏠','🏥','👦','👧','🚌','💳','📚','🐕','🐈','🧴','🏦','📦','🍕','🍎','☕','🧃','🎮','👗','👟','💊','🚗','⚡','📱','🎓','🏋️','🎨','🌿','🎵','✈️','🎁','💄','🔧','🧹','🏡','💰','🌻','❤️','⭐','🔑'];
+  const DAYS_ES=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+  S.data.cats.forEach((cat,i)=>{
+    if(!S.data.cats[i].subitems) S.data.cats[i].subitems=[];
+    const wrapper=document.createElement('div');
+    const row=document.createElement('div'); row.className='cat-set-row'; row.style.borderLeftColor=cat.color;
+    const dotEl=document.createElement('div'); dotEl.style.cssText='width:8px;height:8px;border-radius:50%;background:'+cat.color+';flex-shrink:0'; row.appendChild(dotEl);
+
+    // Emoji
+    const emojiWrap=document.createElement('div'); emojiWrap.style.cssText='position:relative;flex-shrink:0';
+    const eInp=document.createElement('input'); eInp.className='emoji-inp'; eInp.value=cat.icon; eInp.readOnly=true; eInp.style.background=cat.bg; eInp.style.cursor='pointer';
+    const picker=document.createElement('div'); picker.className='emoji-picker'; picker.style.display='none';
+    EMOJIS_LIST.forEach(em=>{
+      const eb=document.createElement('button'); eb.textContent=em; eb.style.cssText='font-size:1.2rem;padding:.3rem;border-radius:7px;border:none;background:none;cursor:pointer';
+      eb.addEventListener('click',()=>{S.data.cats[i].icon=em;eInp.value=em;picker.style.display='none';});
+      picker.appendChild(eb);
+    });
+    eInp.addEventListener('click',e=>{e.stopPropagation();const s=picker.style.display!=='none';document.querySelectorAll('.emoji-picker').forEach(p=>p.style.display='none');picker.style.display=s?'none':'grid';});
+    emojiWrap.appendChild(eInp); emojiWrap.appendChild(picker); row.appendChild(emojiWrap);
+
+    // Name
+    const nInp=document.createElement('input'); nInp.className='name-inp'; nInp.type='text'; nInp.value=cat.name; nInp.placeholder='Nombre';
+    nInp.addEventListener('input',e=>{S.data.cats[i].name=e.target.value;}); row.appendChild(nInp);
+
+    // Freq
+    const fseg=document.createElement('div'); fseg.className='seg'; fseg.style.cssText='flex:0 0 auto;width:110px;margin-left:.3rem';
+    const fw=document.createElement('button'); fw.className='seg-btn'+(cat.freq==='semanal'?' on':''); fw.style.cssText='font-size:.65rem;padding:.3rem'; fw.textContent='📅Sem';
+    const fm=document.createElement('button'); fm.className='seg-btn'+(cat.freq==='mensual'?' on':''); fm.style.cssText='font-size:.65rem;padding:.3rem'; fm.textContent='📆Mes';
+    fw.addEventListener('click',()=>{S.data.cats[i].freq='semanal';fw.className='seg-btn on';fm.className='seg-btn';weekRow.style.display='flex';});
+    fm.addEventListener('click',()=>{S.data.cats[i].freq='mensual';fm.className='seg-btn on';fw.className='seg-btn';weekRow.style.display='none';});
+    fseg.appendChild(fw); fseg.appendChild(fm); row.appendChild(fseg);
+
+    // Budget
+    const bInp=document.createElement('input'); bInp.className='bud-inp'; bInp.type='number'; bInp.placeholder='$0'; bInp.value=cat.budget||'';
+    bInp.addEventListener('input',e=>{S.data.cats[i].budget=Number(e.target.value);}); row.appendChild(bInp);
+
+    // Add sub + Auto
+    const addSub=document.createElement('button'); addSub.style.cssText='font-size:1.1rem;color:var(--purple);font-weight:800;padding:0 .3rem;min-height:36px;flex-shrink:0;background:none;border:none;cursor:pointer'; addSub.textContent='＋';
+    addSub.addEventListener('click',()=>{S.data.cats[i].subitems.push({id:Date.now(),name:'',budget:0});renderSubs();});
+    row.appendChild(addSub);
+    if(cat.freq==='semanal'){
+      const autoBtn=document.createElement('button'); autoBtn.style.cssText='font-size:.75rem;font-weight:800;padding:0 .5rem;min-height:36px;flex-shrink:0;background:#E8D5FF;border:none;border-radius:7px;cursor:pointer;color:#8B5BAE;white-space:nowrap';
+      const currentWeeks=(cat.subitems||[]).length; autoBtn.textContent='⚡ '+(currentWeeks>=5?'4sem':'5sem');
+      autoBtn.addEventListener('click',()=>{
+        const nWeeks=((S.data.cats[i].subitems||[]).length>=5)?4:5;
+        const weekBudget=S.data.cats[i].budget||0; const perWeek=weekBudget>0?Math.round(weekBudget/nWeeks):0;
+        S.data.cats[i].subitems=Array.from({length:nWeeks},(_,wi)=>({id:Date.now()+wi+1,name:'Semana '+(wi+1),budget:perWeek,paid:false,paidWeek:null}));
+        bInp.value=weekBudget; save(); renderSubs();
+      });
+      row.appendChild(autoBtn);
+    }
+    wrapper.appendChild(row);
+
+    // Week start row
+    const weekRow=document.createElement('div'); weekRow.style.cssText='display:'+(cat.freq==='semanal'?'flex':'none')+';align-items:center;gap:.5rem;padding:.5rem .9rem;background:#F5EEFF;border-radius:0 0 10px 10px;flex-wrap:wrap';
+    const wlbl=document.createElement('span'); wlbl.className='sub'; wlbl.textContent='Inicia el:'; weekRow.appendChild(wlbl);
+    DAYS_ES.forEach(day=>{
+      const db=document.createElement('button'); db.className='chip'+((cat.weekStart||'Lunes')===day?' on':''); db.style.cssText='font-size:.7rem;padding:.25rem .6rem;min-height:30px'; db.textContent=day;
+      db.addEventListener('click',()=>{S.data.cats[i].weekStart=day;weekRow.querySelectorAll('.chip').forEach((b,bi)=>b.className='chip'+(DAYS_ES[bi]===day?' on':''));});
+      weekRow.appendChild(db);
+    });
+    wrapper.appendChild(weekRow);
+
+    // Delete category
+    const delRow=document.createElement('div'); delRow.style.cssText='display:flex;justify-content:flex-end;padding:.2rem .5rem';
+    const delCat=document.createElement('button'); delCat.style.cssText='font-size:.65rem;color:var(--muted);font-weight:700;background:none;border:none;cursor:pointer;padding:.2rem .4rem'; delCat.textContent='🗑 Eliminar categoría';
+    delCat.addEventListener('click',()=>{
+      const catName=S.data.cats[i].name; const catId=S.data.cats[i].id;
+      const others=S.data.cats.filter((_,j)=>j!==i);
+      if(!others.length){alert('No podés eliminar la única categoría.');return;}
+      const targetId=others[0].id;
+      Object.keys(S.data.months||{}).forEach(mk2=>{(S.data.months[mk2].expenses||[]).forEach(e=>{if(e.category===catId)e.category=targetId;});});
+      S.data.cats.splice(i,1); save(); render();
+    });
+    delRow.appendChild(delCat); wrapper.appendChild(delRow);
+
+    // Sub-items
+    const subList=document.createElement('div'); subList.className='subitem-list';
+    function renderSubs(){
+      subList.innerHTML='';
+      (S.data.cats[i].subitems||[]).forEach((sub,j)=>{
+        const sr=document.createElement('div'); sr.className='subitem-row';
+        const sni=document.createElement('input'); sni.className='subitem-name'; sni.type='text'; sni.placeholder='Ej: Semana 1...'; sni.value=sub.name;
+        sni.addEventListener('input',e=>S.data.cats[i].subitems[j].name=e.target.value);
+        const sai=document.createElement('input'); sai.className='subitem-amt'; sai.type='number'; sai.placeholder='$0'; sai.value=sub.budget||'';
+        sai.addEventListener('input',e=>{
+          const _ci2=i,_si2=j; S.data.cats[_ci2].subitems[_si2].budget=Number(e.target.value);
+          const tot=S.data.cats[_ci2].subitems.reduce((s,x)=>s+(x.budget||0),0);
+          if(tot>0){S.data.cats[_ci2].budget=tot;bInp.value=tot;}
+          save();
+        });
+        const sdel=document.createElement('button'); sdel.className='subitem-del'; sdel.textContent='✕';
+        sdel.addEventListener('click',()=>{S.data.cats[i].subitems.splice(j,1);save();render();});
+        sr.appendChild(sni);sr.appendChild(sai);sr.appendChild(sdel);
+        subList.appendChild(sr);
+      });
+    }
+    renderSubs();
+    wrapper.appendChild(subList);
+    catSec.appendChild(wrapper);
+  });
+
+  const addCatBtn=document.createElement('button'); addCatBtn.className='ghost-btn'; addCatBtn.style.cssText='width:100%;margin-top:.5rem;margin-bottom:.5rem'; addCatBtn.textContent='+ Agregar categoría';
+  addCatBtn.addEventListener('click',()=>{const palette=CAT_PALETTES[S.data.cats.length%CAT_PALETTES.length];S.data.cats.push({id:'cat_'+Date.now(),name:'Nueva',icon:'✨',color:palette.color,bg:palette.bg,freq:'mensual',budget:0,weekStart:'Lunes',subitems:[]});render();});
+  catSec.appendChild(addCatBtn);
+  root.appendChild(catSec);
+
+  const saveCatBtn=document.createElement('button'); saveCatBtn.className='save-btn'; saveCatBtn.textContent='Guardar cambios';
+  saveCatBtn.addEventListener('click',()=>{save();saveCatBtn.textContent='✓ ¡Guardado!';saveCatBtn.classList.add('ok');setTimeout(()=>{saveCatBtn.textContent='Guardar cambios';saveCatBtn.classList.remove('ok');},1500);});
+  root.appendChild(saveCatBtn);
+
+  // Export/Import
+  const expSec=div({cn:'set-sec',style:{marginTop:'1.4rem'}});
+  expSec.appendChild(div({cn:'set-sec-title'},['💾 Respaldo']));
+  const btnRow2=document.createElement('div'); btnRow2.style.cssText='display:flex;gap:.7rem';
+  const expBtn=document.createElement('button'); expBtn.className='ghost-btn'; expBtn.style.flex='1'; expBtn.textContent='📤 Exportar JSON';
+  expBtn.addEventListener('click',()=>{const blob=new Blob([JSON.stringify(S.data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='mis_finanzas_backup.json';a.click();URL.revokeObjectURL(url);});
+  const fileInp2=document.createElement('input'); fileInp2.type='file'; fileInp2.accept='.json'; fileInp2.style.display='none';
+  fileInp2.addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;const text=await file.text();try{S.data=JSON.parse(text);save();alert('✓ Datos importados');render();}catch{alert('Error: archivo no válido');}});
+  const impBtn=document.createElement('button'); impBtn.className='ghost-btn'; impBtn.style.flex='1'; impBtn.textContent='📥 Importar JSON';
+  impBtn.addEventListener('click',()=>fileInp2.click());
+  btnRow2.appendChild(expBtn); btnRow2.appendChild(fileInp2); btnRow2.appendChild(impBtn);
+  expSec.appendChild(btnRow2); root.appendChild(expSec);
+
+  } catch(e){ c.innerHTML='<p style="color:red;padding:1rem">Error en Ajustes: '+e.message+'</p>'; }
 }
 
 // ═══════════════════════════════════════════════
