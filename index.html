@@ -335,7 +335,7 @@ function SESSION_ID() {
 }
 
 let SB_URL = localStorage.getItem('mf_sb_url') || 'https://kyikjnvzpaigtmrsjkuy.supabase.co';
-let SB_KEY = localStorage.getItem('mf_sb_key') || '';
+let SB_KEY = localStorage.getItem('mf_sb_key') || 'sb_publishable_qG2AfGGaMqsENVqOy-gNHw__TuBK_da';
 let SB_STATUS = 'none'; // 'none' | 'ok' | 'error'
 
 // ═══════════════════════════════════════════════
@@ -1276,6 +1276,7 @@ function rFixed(c) {
   const paidSubsRef = mdata().paidSubs;
 
   // ── Build sub-items list ──
+  // (rebuilt after auto-mark runs above)
   const subItemsList = [];
   (S.data.cats||[]).forEach(cat=>{
     (cat.subitems||[]).forEach(si=>{
@@ -1289,6 +1290,39 @@ function rFixed(c) {
       });
     });
   });
+
+  // Auto-mark weekly sub-items as paid if actual spending >= budget
+  const today_am = new Date();
+  (S.data.cats||[]).forEach(cat=>{
+    (cat.subitems||[]).forEach(si=>{
+      if((si.budget||0)<=0) return;
+      const n = si.name.trim().toLowerCase();
+      if(!n.startsWith('semana ')) return;
+      const siWn = parseInt(n.replace('semana ',''))||0;
+      if(!siWn) return;
+      const key = cat.id+'__'+si.id;
+      if(paidSubsRef[key]) return; // already paid
+      // Get date range for this week number
+      const startDay2 = cat.weekStart||'Lunes';
+      const curWn2 = getCurrentWeekNum(startDay2);
+      const refDate3 = new Date(today_am); refDate3.setDate(today_am.getDate()+(siWn-curWn2)*7);
+      const ws3 = getWeekStartDate(refDate3, startDay2);
+      const we3 = new Date(ws3); we3.setDate(ws3.getDate()+6);
+      const wds3 = ws3.toISOString().split('T')[0];
+      const wde3 = we3.toISOString().split('T')[0];
+      const wkMk3 = ws3.getFullYear()+'-'+String(ws3.getMonth()+1).padStart(2,'0');
+      const mdataWk3 = S.data.months[wkMk3]||{expenses:[]};
+      const allExp3 = [...(mdataWk3.expenses||[])];
+      if(wkMk3!==cms) allExp3.push(...(mdata().expenses||[]));
+      const spent3 = allExp3.filter(e=>e.category===cat.id&&e.date>=wds3&&e.date<=wde3).reduce((s,e)=>s+e.amount,0);
+      if(spent3 >= si.budget){
+        paidSubsRef[key] = true;
+        mdata().paidSubs = paidSubsRef;
+      }
+    });
+  });
+  let changed = false;
+  // (save will happen if anything changed at end of render — skip for now to avoid loop)
 
   // ── SECTION 1: Compromisos por categoría ──
   if(subItemsList.length){
