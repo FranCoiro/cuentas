@@ -524,17 +524,13 @@ function rHome(c) {
   if(refCat){
     const today2 = new Date();
     const startDay = refCat.weekStart||'Lunes';
-    // Apply offset
+    // Current week number + offset
+    const curWn = getCurrentWeekNum(startDay);
+    const wn = Math.min(5, Math.max(1, curWn + weekOffset));
+    // Calculate the actual date range for display
     const refDate = new Date(today2); refDate.setDate(today2.getDate() + weekOffset*7);
     const weekStartDate = getWeekStartDate(refDate, startDay);
-    // Calculate week number based on refDate
-    const firstOfMonth = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
-    let cursor = getWeekStartDate(firstOfMonth, startDay);
-    if(cursor.getMonth() < refDate.getMonth() || cursor.getFullYear() < refDate.getFullYear()) cursor.setDate(cursor.getDate()+7);
-    let wn = 1;
-    const wsTime = weekStartDate.getTime();
-    while(cursor.getTime() < wsTime){ cursor.setDate(cursor.getDate()+7); wn++; }
-    const wkey = refDate.getFullYear()+'-'+String(refDate.getMonth()+1).padStart(2,'0')+'-W'+wn;
+    const wkey = getWeekKey(startDay); // only used for paid status of current week
     const weekEndDate = new Date(weekStartDate); weekEndDate.setDate(weekStartDate.getDate()+6);
     const wds = weekStartDate.toISOString().split('T')[0];
     const wde = weekEndDate.toISOString().split('T')[0];
@@ -588,18 +584,16 @@ function rHome(c) {
       const wprev=document.createElement('button'); wprev.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wprev.textContent='←';
       wprev.addEventListener('click',()=>{
         const cur = S._weekOffset||0;
-        const newVal = Math.max(0, cur-1);
-        S._weekOffset = newVal; render();
+        if(curWn + cur > 1){ S._weekOffset = cur-1; render(); }
       });
       const wnext=document.createElement('button'); wnext.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wnext.textContent='→';
       wnext.addEventListener('click',()=>{
         const cur = S._weekOffset||0;
-        const newVal = Math.min(3, cur+1);
-        S._weekOffset = newVal; render();
+        if(curWn + cur < 4){ S._weekOffset = cur+1; render(); }
       });
       const wlabel=document.createElement('div'); wlabel.className='ts-week';
-      const offsetLabel = weekOffset===0?'Esta semana':weekOffset<0?'Hace '+(Math.abs(weekOffset))+' sem':'En '+weekOffset+' sem';
-      wlabel.textContent=offsetLabel+' · '+wds.slice(5)+' → '+wde.slice(5);
+      const semLabel = wn===curWn ? 'Esta semana (Sem. '+wn+')' : 'Semana '+wn;
+      wlabel.textContent=semLabel+' · '+wds.slice(5)+' → '+wde.slice(5);
       wnav.appendChild(wprev); wnav.appendChild(wlabel); wnav.appendChild(wnext);
       tshdr.appendChild(tstitle); tshdr.appendChild(wnav);
       tsCard.appendChild(tshdr);
