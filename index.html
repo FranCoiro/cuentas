@@ -538,7 +538,12 @@ function rHome(c) {
       const mdata2=S.data.months[wkMkNow]||{expenses:[]};
       const allExp=[...(mdata2.expenses||[])];
       if(wkMkNow!==mk()) allExp.push(...(mdata().expenses||[]));
-      const spent=allExp.filter(e=>e.category===cat.id&&e.date>=wds&&e.date<=wde).reduce((s,e)=>s+e.amount,0);
+      const actualSpent=allExp.filter(e=>e.category===cat.id&&e.date>=wds&&e.date<=wde).reduce((s,e)=>s+e.amount,0);
+      // Also count sub-item marked as paid in Fijos
+      const paidSubsNow=mdata().paidSubs||{};
+      let paidSubAmt=0;
+      if(sub){const key=cat.id+'__'+sub.id;if(paidSubsNow[key])paidSubAmt=budget;}
+      const spent=Math.max(actualSpent,paidSubAmt);
       totalBudget+=budget; totalSpent+=spent;
       tsItems.push({cat,budget,spent,remain:budget-spent});
     });
@@ -1918,30 +1923,14 @@ function rSemanal(c) {
     root.appendChild(catCard);
   });
 
-  // Total for this week
-  let totalBudgetView=0, carryTot=0;
+  // Total for this week = sum of base budgets only (no carry accumulation)
+  let totalBudgetView=0;
   weeklyCats.forEach(cat=>{
-    let carry2=0;
-    for(let wn=1;wn<=viewWn;wn++){
-      const subs=cat.subitems||[];
-      let sub=subs.find(si=>si.name.trim().toLowerCase()==='semana '+wn);
-      if(!sub&&subs.length>=wn) sub=subs[wn-1];
-      const base=sub?(sub.budget||0):(cat.budget||0);
-      const eff=base+carry2;
-      const todayNow=new Date();
-      const refDate=new Date(todayNow); refDate.setDate(todayNow.getDate()+(wn-curWn)*7);
-      const weekStart=getWeekStartDate(refDate,startDay);
-      const wds=weekStart.toISOString().split('T')[0];
-      const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
-      const wde=weekEnd.toISOString().split('T')[0];
-      const wkMk=weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0');
-      const mdataWk=S.data.months[wkMk]||{expenses:[]};
-      const allExp=[...(mdataWk.expenses||[])];
-      if(wkMk!==mk()) allExp.push(...(mdata().expenses||[]));
-      const spent=allExp.filter(e=>e.category===cat.id&&e.date>=wds&&e.date<=wde).reduce((s,e)=>s+e.amount,0);
-      if(wn===viewWn) totalBudgetView+=eff;
-      carry2=eff-spent;
-    }
+    const subs=cat.subitems||[];
+    let sub=subs.find(si=>si.name.trim().toLowerCase()==='semana '+viewWn);
+    if(!sub&&subs.length>=viewWn) sub=subs[viewWn-1];
+    const base=sub?(sub.budget||0):(cat.budget||0);
+    totalBudgetView+=base;
   });
 
   const totalCard=document.createElement('div');
