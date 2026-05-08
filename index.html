@@ -494,9 +494,9 @@ function rHome(c) {
 
   // Month nav
   const ms = div({cn:'mstrip'});
-  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month--; if(S.month<0){S.month=11;S.year--;} render(); }},['←']));
+  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month--; if(S.month<0){S.month=11;S.year--;} S.data._weekOffset=0; render(); }},['←']));
   ms.appendChild(el('span',{cn:'mname'},[MONTHS[S.month], ' ', el('span',{cn:'myear'},[String(S.year)])]));
-  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month++; if(S.month>11){S.month=0;S.year++;} render(); }},['→']));
+  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month++; if(S.month>11){S.month=0;S.year++;} S.data._weekOffset=0; render(); }},['→']));
   root.appendChild(ms);
 
   // Alerts
@@ -583,9 +583,15 @@ function rHome(c) {
       // Week nav
       const wnav=document.createElement('div'); wnav.style.cssText='display:flex;align-items:center;gap:.3rem';
       const wprev=document.createElement('button'); wprev.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wprev.textContent='←';
-      wprev.addEventListener('click',()=>{ S.data._weekOffset=(S.data._weekOffset||0)-1; save(); render(); });
+      wprev.addEventListener('click',()=>{
+        const cur = S.data._weekOffset||0;
+        if(cur > 0){ S.data._weekOffset=cur-1; save(); render(); }
+      });
       const wnext=document.createElement('button'); wnext.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wnext.textContent='→';
-      wnext.addEventListener('click',()=>{ S.data._weekOffset=(S.data._weekOffset||0)+1; save(); render(); });
+      wnext.addEventListener('click',()=>{
+        const cur = S.data._weekOffset||0;
+        if(cur < 3){ S.data._weekOffset=cur+1; save(); render(); }
+      });
       const wlabel=document.createElement('div'); wlabel.className='ts-week';
       const offsetLabel = weekOffset===0?'Esta semana':weekOffset<0?'Hace '+(Math.abs(weekOffset))+' sem':'En '+weekOffset+' sem';
       wlabel.textContent=offsetLabel+' · '+wds.slice(5)+' → '+wde.slice(5);
@@ -668,14 +674,22 @@ function rHome(c) {
 
   // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
   // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
-  // Sub-ítems pendientes: los no marcados como pagados este mes
+  // Sub-ítems pendientes: los no pagados se descuentan del disponible
   const paidSubs = mdata().paidSubs || {};
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
       const key = cat.id+'__'+si.id;
-      if(!paidSubs[key]) siPagados += si.budget;
+      if(paidSubs[key]) return; // already paid
+      // For weekly sub-items: only count from current week onwards
+      const n = si.name.trim().toLowerCase();
+      if(n.startsWith('semana ')){
+        const siWn = parseInt(n.replace('semana ',''))||0;
+        const curWn = getCurrentWeekNum(cat.weekStart||'Lunes');
+        if(siWn < curWn) return; // past week, already happened
+      }
+      siPagados += si.budget;
     });
   });
 
