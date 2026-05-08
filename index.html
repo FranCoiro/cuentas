@@ -515,7 +515,9 @@ function rHome(c) {
   // ── Calcular todo ──
   // ── Tarjeta semanal ──
   // Use the first weekly category's weekStart for the week number
-  const weekOffset = S.data._weekOffset || 0; // 0=current, -1=prev, +1=next
+  // Force weekOffset to valid range 0-3
+  if(!S.data._weekOffset || S.data._weekOffset < 0 || S.data._weekOffset > 3) S.data._weekOffset = 0;
+  const weekOffset = S.data._weekOffset;
   const weeklyCatsAll = S.data.cats.filter(c=>c.freq==='semanal');
   const refCat = weeklyCatsAll[0];
   if(refCat){
@@ -585,12 +587,14 @@ function rHome(c) {
       const wprev=document.createElement('button'); wprev.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wprev.textContent='←';
       wprev.addEventListener('click',()=>{
         const cur = S.data._weekOffset||0;
-        if(cur > 0){ S.data._weekOffset=cur-1; save(); render(); }
+        const newVal = Math.max(0, cur-1);
+        S.data._weekOffset = newVal; save(); render();
       });
       const wnext=document.createElement('button'); wnext.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wnext.textContent='→';
       wnext.addEventListener('click',()=>{
         const cur = S.data._weekOffset||0;
-        if(cur < 3){ S.data._weekOffset=cur+1; save(); render(); }
+        const newVal = Math.min(3, cur+1);
+        S.data._weekOffset = newVal; save(); render();
       });
       const wlabel=document.createElement('div'); wlabel.className='ts-week';
       const offsetLabel = weekOffset===0?'Esta semana':weekOffset<0?'Hace '+(Math.abs(weekOffset))+' sem':'En '+weekOffset+' sem';
