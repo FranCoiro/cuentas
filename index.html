@@ -494,9 +494,9 @@ function rHome(c) {
 
   // Month nav
   const ms = div({cn:'mstrip'});
-  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month--; if(S.month<0){S.month=11;S.year--;} S.data._weekOffset=0; render(); }},['←']));
+  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month--; if(S.month<0){S.month=11;S.year--;} S._weekOffset=0; render(); }},['←']));
   ms.appendChild(el('span',{cn:'mname'},[MONTHS[S.month], ' ', el('span',{cn:'myear'},[String(S.year)])]));
-  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month++; if(S.month>11){S.month=0;S.year++;} S.data._weekOffset=0; render(); }},['→']));
+  ms.appendChild(btn({cn:'arrbtn',onClick:() => { S.month++; if(S.month>11){S.month=0;S.year++;} S._weekOffset=0; render(); }},['→']));
   root.appendChild(ms);
 
   // Alerts
@@ -515,10 +515,10 @@ function rHome(c) {
   // ── Calcular todo ──
   // ── Tarjeta semanal ──
   // Use the first weekly category's weekStart for the week number
-  // Clamp weekOffset to valid range 0-3 (allow 0 explicitly)
-  if(S.data._weekOffset === undefined || S.data._weekOffset === null || S.data._weekOffset < 0) S.data._weekOffset = 0;
-  if(S.data._weekOffset > 3) S.data._weekOffset = 3;
-  const weekOffset = S.data._weekOffset;
+  // weekOffset is pure UI state (not saved to DB)
+  if(S._weekOffset === undefined || S._weekOffset < 0) S._weekOffset = 0;
+  if(S._weekOffset > 3) S._weekOffset = 3;
+  const weekOffset = S._weekOffset;
   const weeklyCatsAll = S.data.cats.filter(c=>c.freq==='semanal');
   const refCat = weeklyCatsAll[0];
   if(refCat){
@@ -587,15 +587,15 @@ function rHome(c) {
       const wnav=document.createElement('div'); wnav.style.cssText='display:flex;align-items:center;gap:.3rem';
       const wprev=document.createElement('button'); wprev.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wprev.textContent='←';
       wprev.addEventListener('click',()=>{
-        const cur = S.data._weekOffset||0;
+        const cur = S._weekOffset||0;
         const newVal = Math.max(0, cur-1);
-        S.data._weekOffset = newVal; save(); render();
+        S._weekOffset = newVal; render();
       });
       const wnext=document.createElement('button'); wnext.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wnext.textContent='→';
       wnext.addEventListener('click',()=>{
-        const cur = S.data._weekOffset||0;
+        const cur = S._weekOffset||0;
         const newVal = Math.min(3, cur+1);
-        S.data._weekOffset = newVal; save(); render();
+        S._weekOffset = newVal; render();
       });
       const wlabel=document.createElement('div'); wlabel.className='ts-week';
       const offsetLabel = weekOffset===0?'Esta semana':weekOffset<0?'Hace '+(Math.abs(weekOffset))+' sem':'En '+weekOffset+' sem';
@@ -679,22 +679,14 @@ function rHome(c) {
 
   // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
   // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
-  // Sub-ítems pendientes: solo la semana actual (no pagada) + sub-ítems mensuales
+  // Sub-ítems pendientes: todos los no pagados del mes
   const paidSubs = mdata().paidSubs || {};
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
       const key = cat.id+'__'+si.id;
-      if(paidSubs[key]) return; // already paid
-      const n = si.name.trim().toLowerCase();
-      if(n.startsWith('semana ')){
-        // Only count the CURRENT week's sub-item
-        const siWn = parseInt(n.replace('semana ',''))||0;
-        const curWn = getCurrentWeekNum(cat.weekStart||'Lunes');
-        if(siWn !== curWn) return; // skip other weeks
-      }
-      siPagados += si.budget;
+      if(!paidSubs[key]) siPagados += si.budget;
     });
   });
 
@@ -1537,7 +1529,6 @@ function rFixed(c) {
   const weeklyCats = S.data.cats.filter(c => c.freq==='semanal' && c.budget>0);
   if (!weeklyCats.length) {
     root.appendChild(pe({cn:'empty'},['No tenés categorías semanales con presupuesto. Configuralas en ⚙️ Ajustes.']));
-    return;
   }
 
   weeklyCats.forEach(cat => {
