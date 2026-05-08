@@ -515,8 +515,9 @@ function rHome(c) {
   // ── Calcular todo ──
   // ── Tarjeta semanal ──
   // Use the first weekly category's weekStart for the week number
-  // Force weekOffset to valid range 0-3
-  if(!S.data._weekOffset || S.data._weekOffset < 0 || S.data._weekOffset > 3) S.data._weekOffset = 0;
+  // Clamp weekOffset to valid range 0-3 (allow 0 explicitly)
+  if(S.data._weekOffset === undefined || S.data._weekOffset === null || S.data._weekOffset < 0) S.data._weekOffset = 0;
+  if(S.data._weekOffset > 3) S.data._weekOffset = 3;
   const weekOffset = S.data._weekOffset;
   const weeklyCatsAll = S.data.cats.filter(c=>c.freq==='semanal');
   const refCat = weeklyCatsAll[0];
@@ -678,7 +679,7 @@ function rHome(c) {
 
   // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
   // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
-  // Sub-ítems pendientes: los no pagados se descuentan del disponible
+  // Sub-ítems pendientes: solo la semana actual (no pagada) + sub-ítems mensuales
   const paidSubs = mdata().paidSubs || {};
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
@@ -686,12 +687,12 @@ function rHome(c) {
       if((si.budget||0)<=0) return;
       const key = cat.id+'__'+si.id;
       if(paidSubs[key]) return; // already paid
-      // For weekly sub-items: only count from current week onwards
       const n = si.name.trim().toLowerCase();
       if(n.startsWith('semana ')){
+        // Only count the CURRENT week's sub-item
         const siWn = parseInt(n.replace('semana ',''))||0;
         const curWn = getCurrentWeekNum(cat.weekStart||'Lunes');
-        if(siWn < curWn) return; // past week, already happened
+        if(siWn !== curWn) return; // skip other weeks
       }
       siPagados += si.budget;
     });
