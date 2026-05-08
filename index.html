@@ -1469,14 +1469,14 @@ function rFixed(c) {
     root.appendChild(pe({cn:'empty'},['No tenés categorías semanales. Configuralas en ⚙️ Ajustes.']));
   } else {
     weeklyCats.forEach(cat=>{
-      const catWrap=document.createElement('div'); catWrap.style.marginBottom='1.3rem';
-      const catHdr=document.createElement('div'); catHdr.style.cssText='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
+      const catWrap=document.createElement('div'); catWrap.style.marginBottom='1rem';
+      const catHdr=document.createElement('div'); catHdr.style.cssText='display:flex;align-items:center;gap:.5rem;padding:.6rem .8rem;background:#F5EEFF;border-radius:10px';
       const ei=document.createElement('span'); ei.style.fontSize='1.2rem'; ei.textContent=cat.icon;
-      const ni=document.createElement('strong'); ni.style.fontSize='.95rem'; ni.textContent=cat.name;
+      const ni=document.createElement('strong'); ni.style.fontSize='.9rem'; ni.textContent=cat.name;
       const si2=document.createElement('span'); si2.className='sub';
-      si2.textContent=' · '+fmt(cat.budget)+'/sem · inicia el '+(cat.weekStart||'Lunes');
+      si2.textContent=' · '+fmt(cat.budget)+'/sem';
       catHdr.appendChild(ei); catHdr.appendChild(ni); catHdr.appendChild(si2);
-      catWrap.appendChild(catHdr); catWrap.appendChild(buildWeekHistory(cat));
+      catWrap.appendChild(catHdr);
       root.appendChild(catWrap);
     });
   }
