@@ -335,7 +335,7 @@ function SESSION_ID() {
 }
 
 let SB_URL = localStorage.getItem('mf_sb_url') || 'https://kyikjnvzpaigtmrsjkuy.supabase.co';
-let SB_KEY = localStorage.getItem('mf_sb_key') || 'sb_publishable_qG2AfGGaMqsENVqOy-gNHw__TuBK_da';
+let SB_KEY = localStorage.getItem('mf_sb_key') || '';
 let SB_STATUS = 'none'; // 'none' | 'ok' | 'error'
 
 // ═══════════════════════════════════════════════
@@ -400,6 +400,7 @@ function catWeekExpenses(catId) {
 // PERSISTENCE
 // ═══════════════════════════════════════════════
 function saveLocal() {
+  S.data._savedAt = Date.now();
   localStorage.setItem('mf_data', JSON.stringify(S.data));
 }
 
@@ -429,8 +430,19 @@ async function loadData() {
       if (r.ok) {
         const rows = await r.json();
         if (rows && rows[0] && rows[0].data) {
-          S.data = rows[0].data;
-          saveLocal();
+          const remote = rows[0].data;
+          const localStr = localStorage.getItem('mf_data');
+          const local = localStr ? JSON.parse(localStr) : null;
+          const remoteSavedAt = remote._savedAt || 0;
+          const localSavedAt = local ? (local._savedAt || 0) : 0;
+          if (localSavedAt > remoteSavedAt) {
+            // Local is newer — keep it and push to Supabase
+            S.data = local;
+            saveSB();
+          } else {
+            S.data = remote;
+            saveLocal();
+          }
           SB_STATUS = 'ok';
           return;
         }
