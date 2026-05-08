@@ -292,6 +292,7 @@ code{background:#F0E6FF;padding:.1rem .4rem;border-radius:4px;font-size:.78rem;c
     <button class="ni" data-view="fixed"><span class="ico">📌</span><span class="lbl">Fijos</span></button>
     <button class="ni" data-view="fondos"><span class="ico">🏦</span><span class="lbl">Fondos</span></button>
     <button class="ni" data-view="deseos"><span class="ico">✨</span><span class="lbl">Deseos</span></button>
+    <button class="ni" data-view="semanal"><span class="ico">📅</span><span class="lbl">Semanal</span></button>
     <button class="ni" data-view="projected"><span class="ico">🔮</span><span class="lbl">Proyectados</span></button>
     <button class="ni" data-view="settings"><span class="ico">⚙️</span><span class="lbl">Ajustes</span></button>
   </nav>
@@ -482,7 +483,7 @@ function go(view) {
 function render() {
   const c = document.getElementById('content');
   c.innerHTML = '';
-  ({home:rHome, income:rIncome, expenses:rExpenses, fixed:rFixed, fondos:rFondos, projected:rProjected, deseos:rDeseos, settings:rSettings})[S.view]?.(c);
+  ({home:rHome, income:rIncome, expenses:rExpenses, fixed:rFixed, fondos:rFondos, projected:rProjected, deseos:rDeseos, semanal:rSemanal, settings:rSettings})[S.view]?.(c);
 }
 
 // ═══════════════════════════════════════════════
@@ -513,89 +514,41 @@ function rHome(c) {
   }
 
   // ── Calcular todo ──
-  // ── Tarjeta semanal ──
-  // Use the first weekly category's weekStart for the week number
-  // weekOffset is pure UI state (not saved to DB)
-  if(S._weekOffset === undefined || S._weekOffset < 0) S._weekOffset = 0;
-  if(S._weekOffset > 3) S._weekOffset = 3;
-  const weekOffset = S._weekOffset;
-  const weeklyCatsAll = S.data.cats.filter(c=>c.freq==='semanal');
-  const refCat = weeklyCatsAll[0];
-  if(refCat){
-    const today2 = new Date();
-    const startDay = refCat.weekStart||'Lunes';
-    // Current week number + offset
+  // ── Tarjeta semanal (semana actual) ──
+  const weeklyCatsAll = S.data.cats.filter(c=>c.freq==='semanal'&&(c.subitems||[]).length>0);
+  if(weeklyCatsAll.length>0){
+    const startDay = weeklyCatsAll[0].weekStart||'Lunes';
     const curWn = getCurrentWeekNum(startDay);
-    const wn = Math.min(5, Math.max(1, curWn + weekOffset));
-    // Calculate the actual date range for display
-    const refDate = new Date(today2); refDate.setDate(today2.getDate() + weekOffset*7);
-    const weekStartDate = getWeekStartDate(refDate, startDay);
-    const wkey = getWeekKey(startDay); // only used for paid status of current week
-    const weekEndDate = new Date(weekStartDate); weekEndDate.setDate(weekStartDate.getDate()+6);
-    const wds = weekStartDate.toISOString().split('T')[0];
-    const wde = weekEndDate.toISOString().split('T')[0];
+    const todayNow = new Date();
+    const weekStartNow = getWeekStartDate(todayNow, startDay);
+    const weekEndNow = new Date(weekStartNow); weekEndNow.setDate(weekStartNow.getDate()+6);
+    const wds = weekStartNow.toISOString().split('T')[0];
+    const wde = weekEndNow.toISOString().split('T')[0];
+    const wkMkNow = weekStartNow.getFullYear()+'-'+String(weekStartNow.getMonth()+1).padStart(2,'0');
 
     const tsItems = [];
-    let totalBudget = 0, totalSpent = 0;
-
+    let totalBudget=0, totalSpent=0;
     weeklyCatsAll.forEach(cat=>{
       if(cat.name.toLowerCase().includes('miguel')) return;
-      // Find sub-item named exactly "Semana N" (exact match, case-insensitive)
-      // Find sub-item for week N — by exact name or by index (N-1)
-      const subs = cat.subitems||[];
-      let subItem = subs.find(si=>si.name.trim().toLowerCase()==='semana '+wn);
-      if(!subItem && subs.length>=wn) subItem = subs[wn-1]; // fallback: Nth sub-item
-      const budget = subItem ? (subItem.budget||0) : (subs.length===0 ? (cat.budget||0) : 0);
+      const subs=cat.subitems||[];
+      let sub=subs.find(si=>si.name.trim().toLowerCase()==='semana '+curWn);
+      if(!sub&&subs.length>=curWn) sub=subs[curWn-1];
+      const budget=sub?(sub.budget||0):(subs.length===0?(cat.budget||0):0);
       if(!budget) return;
-
-      // Actual recorded expenses this week
-      const wkMk = weekStartDate.getFullYear()+'-'+String(weekStartDate.getMonth()+1).padStart(2,'0');
-      const monthData2 = S.data.months[wkMk]||{income:[],expenses:[]};
-      const curMonthData = mdata();
-      const allExpenses2 = [...(monthData2.expenses||[])];
-      if(wkMk !== mk()) allExpenses2.push(...(curMonthData.expenses||[]));
-      const actualSpentWeek = allExpenses2
-        .filter(e=>e.category===cat.id && e.date>=wds && e.date<=wde)
-        .reduce((s,e)=>s+e.amount,0);
-      // Also count sub-item marked as paid in Fijos for this week
-      const paidSubsNow = mdata().paidSubs || {};
-      const paidSubAmt = (cat.subitems||[]).reduce((s,si)=>{
-        const n = si.name.trim().toLowerCase();
-        if(!n.startsWith('semana ')) return s;
-        const siWn = parseInt(n.replace('semana ',''));
-        if(siWn !== wn) return s;
-        const key = cat.id+'__'+si.id;
-        return s + (paidSubsNow[key] ? (si.budget||0) : 0);
-      },0);
-      const spent = Math.max(actualSpentWeek, paidSubAmt);
-
-      totalBudget += budget;
-      totalSpent  += spent;
+      const mdata2=S.data.months[wkMkNow]||{expenses:[]};
+      const allExp=[...(mdata2.expenses||[])];
+      if(wkMkNow!==mk()) allExp.push(...(mdata().expenses||[]));
+      const spent=allExp.filter(e=>e.category===cat.id&&e.date>=wds&&e.date<=wde).reduce((s,e)=>s+e.amount,0);
+      totalBudget+=budget; totalSpent+=spent;
       tsItems.push({cat,budget,spent,remain:budget-spent});
     });
 
     if(totalBudget>0){
-      const tsCard = div({cn:'tarjeta-semanal'});
-      const tshdr = div({cn:'ts-header'});
+      const tsCard=div({cn:'tarjeta-semanal'});
+      const tshdr=div({cn:'ts-header'});
       const tstitle=document.createElement('div'); tstitle.className='ts-title'; tstitle.textContent='💳 Tarjeta semanal';
-      // Week nav
-      const wnav=document.createElement('div'); wnav.style.cssText='display:flex;align-items:center;gap:.3rem';
-      const wprev=document.createElement('button'); wprev.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wprev.textContent='←';
-      wprev.addEventListener('click',()=>{
-        const cur = S._weekOffset||0;
-        if(curWn + cur > 1){ S._weekOffset = cur-1; render(); }
-      });
-      const wnext=document.createElement('button'); wnext.style.cssText='background:rgba(255,255,255,.4);border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:.8rem;font-weight:800;display:flex;align-items:center;justify-content:center'; wnext.textContent='→';
-      wnext.addEventListener('click',()=>{
-        const cur = S._weekOffset||0;
-        if(curWn + cur < 4){ S._weekOffset = cur+1; render(); }
-      });
-      const wlabel=document.createElement('div'); wlabel.className='ts-week';
-      const semLabel = wn===curWn ? 'Esta semana (Sem. '+wn+')' : 'Semana '+wn;
-      wlabel.textContent=semLabel+' · '+wds.slice(5)+' → '+wde.slice(5);
-      wnav.appendChild(wprev); wnav.appendChild(wlabel); wnav.appendChild(wnext);
-      tshdr.appendChild(tstitle); tshdr.appendChild(wnav);
-      tsCard.appendChild(tshdr);
+      const tswk=document.createElement('div'); tswk.className='ts-week'; tswk.textContent='Sem. '+curWn+' · '+wds.slice(5)+' → '+wde.slice(5);
+      tshdr.appendChild(tstitle); tshdr.appendChild(tswk); tsCard.appendChild(tshdr);
 
       const remain=totalBudget-totalSpent;
       const saldoEl=document.createElement('div'); saldoEl.className='ts-saldo';
@@ -604,39 +557,25 @@ function rHome(c) {
       tsCard.appendChild(saldoEl);
 
       const subEl=document.createElement('div'); subEl.className='ts-sub';
-      subEl.textContent=fmt(totalSpent)+' gastado de '+fmt(totalBudget)+' presupuestado esta semana';
+      subEl.textContent=fmt(totalSpent)+' gastado de '+fmt(totalBudget)+' presupuestado';
       tsCard.appendChild(subEl);
 
       // Day dots
-      const dayNames = ['L','M','X','J','V','S','D'];
-      const startDayIdx = DAY_MAP[startDay]||1; // 0=Dom,1=Lun...6=Sab
-      // Build ordered days starting from weekStart
-      const orderedDays = [];
-      for(let d=0;d<7;d++){
-        const dayIdx = (startDayIdx + d) % 7;
-        orderedDays.push(dayIdx);
-      }
-      const todayDow = today2.getDay();
-      const daysElapsed = orderedDays.indexOf(todayDow) + 1; // 1-7
-
-      const dotsWrap = document.createElement('div');
-      dotsWrap.style.cssText='display:flex;align-items:center;gap:4px;margin-bottom:.8rem';
-      orderedDays.forEach((dow,i)=>{
-        const col = document.createElement('div');
-        col.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px';
-        const dot = document.createElement('div');
-        const passed = i < daysElapsed;
-        const isToday = i === daysElapsed-1;
-        dot.style.cssText='width:'+(isToday?'12px':'8px')+';height:'+(isToday?'12px':'8px')+
-          ';border-radius:50%;background:'+(passed?'rgba(90,60,120,0.7)':'rgba(255,255,255,0.4)')+
-          ';transition:all .3s'+(isToday?';box-shadow:0 0 0 3px rgba(90,60,120,0.25)':'');
-        const lbl = document.createElement('span');
-        lbl.style.cssText='font-size:.55rem;font-weight:800;color:'+(passed?'rgba(60,40,80,0.8)':'rgba(120,100,140,0.5)');
-        // Map dow to letter
-        const ltrs=['D','L','M','X','J','V','S'];
-        lbl.textContent=ltrs[dow];
-        col.appendChild(dot); col.appendChild(lbl);
-        dotsWrap.appendChild(col);
+      const DAY_MAP2={Lunes:1,Martes:2,'Miércoles':3,Jueves:4,Viernes:5,'Sábado':6,Domingo:0};
+      const startDayIdx2=DAY_MAP2[startDay]||1;
+      const orderedDays2=[];
+      for(let d=0;d<7;d++) orderedDays2.push((startDayIdx2+d)%7);
+      const todayDow=todayNow.getDay();
+      const daysElapsed=orderedDays2.indexOf(todayDow)+1;
+      const dotsWrap=document.createElement('div'); dotsWrap.style.cssText='display:flex;align-items:center;gap:4px;margin-bottom:.8rem';
+      const ltrs=['D','L','M','X','J','V','S'];
+      orderedDays2.forEach((dow,i)=>{
+        const col=document.createElement('div'); col.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px';
+        const passed=i<daysElapsed; const isToday=i===daysElapsed-1;
+        const dot=document.createElement('div');
+        dot.style.cssText='width:'+(isToday?'12px':'8px')+';height:'+(isToday?'12px':'8px')+';border-radius:50%;background:'+(passed?'rgba(90,60,120,0.7)':'rgba(255,255,255,0.4)')+(isToday?';box-shadow:0 0 0 3px rgba(90,60,120,0.25)':'');
+        const lbl=document.createElement('span'); lbl.style.cssText='font-size:.55rem;font-weight:800;color:'+(passed?'rgba(60,40,80,0.8)':'rgba(120,100,140,0.5)'); lbl.textContent=ltrs[dow];
+        col.appendChild(dot); col.appendChild(lbl); dotsWrap.appendChild(col);
       });
       tsCard.appendChild(dotsWrap);
 
@@ -657,6 +596,7 @@ function rHome(c) {
       root.appendChild(tsCard);
     }
   }
+
 
   const inc       = totalIncome();
   const exp       = totalExpenses();
@@ -1873,6 +1813,144 @@ function getWeekKey(startDayName) {
   return today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-W'+wn;
 }
 
+
+// ═══════════════════════════════════════════════
+// SEMANAL VIEW
+// ═══════════════════════════════════════════════
+function rSemanal(c) {
+  const root = div({cn:'view'});
+  c.appendChild(root);
+  root.appendChild(h2e({cn:'page-title'},['📅 Semanal']));
+  root.appendChild(pe({cn:'sub',style:{marginBottom:'1rem'}},['Presupuesto semanal con arrastre. Si gastás de más en una semana, se descuenta de las siguientes.']));
+
+  const weeklyCats = S.data.cats.filter(cat=>cat.freq==='semanal'&&(cat.subitems||[]).length>0&&!cat.name.toLowerCase().includes('miguel'));
+  if(!weeklyCats.length){
+    root.appendChild(pe({cn:'empty'},['No tenés categorías semanales configuradas. Andá a ⚙️ Ajustes.']));
+    return;
+  }
+
+  if(S._weekOffset===undefined) S._weekOffset=0;
+  const startDay = weeklyCats[0].weekStart||'Lunes';
+  const curWn = getCurrentWeekNum(startDay);
+  const totalWeeks = 4; // weeks in month
+
+  // Nav arrows
+  const navRow = document.createElement('div');
+  navRow.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;background:#F5EEFF;border-radius:12px;padding:.5rem .8rem';
+  const prevBtn=document.createElement('button'); prevBtn.className='arrbtn'; prevBtn.textContent='←';
+  prevBtn.addEventListener('click',()=>{if(S._weekOffset>0){S._weekOffset--;render();}});
+  prevBtn.style.opacity=S._weekOffset===0?'0.3':'1';
+  const nextBtn=document.createElement('button'); nextBtn.className='arrbtn'; nextBtn.textContent='→';
+  nextBtn.addEventListener('click',()=>{if(S._weekOffset<totalWeeks-curWn){S._weekOffset++;render();}});
+  nextBtn.style.opacity=S._weekOffset>=totalWeeks-curWn?'0.3':'1';
+
+  const viewWn = curWn + S._weekOffset;
+  const wLabel = document.createElement('div');
+  wLabel.style.cssText="font-family:'Lora',serif;font-weight:700;font-size:1rem;color:#5A4A6A;text-align:center";
+  wLabel.textContent = viewWn===curWn ? '📍 Semana '+viewWn+' (actual)' : viewWn<curWn ? 'Semana '+viewWn+' (pasada)' : 'Semana '+viewWn;
+  navRow.appendChild(prevBtn); navRow.appendChild(wLabel); navRow.appendChild(nextBtn);
+  root.appendChild(navRow);
+
+  // Calculate carry-over for each category up to viewWn
+  weeklyCats.forEach(cat=>{
+    const catCard=document.createElement('div');
+    catCard.style.cssText='background:#FFF;border:2px solid var(--border);border-radius:14px;padding:1rem;margin-bottom:.7rem';
+
+    const catTitle=document.createElement('div'); catTitle.style.cssText='display:flex;align-items:center;gap:.5rem;margin-bottom:.8rem';
+    const ico=document.createElement('span'); ico.style.fontSize='1.1rem'; ico.textContent=cat.icon;
+    const nm=document.createElement('strong'); nm.style.fontSize='.9rem'; nm.textContent=cat.name;
+    catTitle.appendChild(ico); catTitle.appendChild(nm); catCard.appendChild(catTitle);
+
+    // Calculate all weeks with carry-over up to viewWn
+    let carry=0;
+    for(let wn=1; wn<=viewWn; wn++){
+      const subs=cat.subitems||[];
+      let sub=subs.find(si=>si.name.trim().toLowerCase()==='semana '+wn);
+      if(!sub&&subs.length>=wn) sub=subs[wn-1];
+      const baseBudget=sub?(sub.budget||0):(cat.budget||0);
+      const effectiveBudget=baseBudget+carry;
+
+      // Get actual spending for this week
+      const todayNow=new Date();
+      const refDate=new Date(todayNow); refDate.setDate(todayNow.getDate()+(wn-curWn)*7);
+      const weekStart=getWeekStartDate(refDate, startDay);
+      const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+      const wds=weekStart.toISOString().split('T')[0];
+      const wde=weekEnd.toISOString().split('T')[0];
+      const wkMk=weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0');
+      const mdataWk=S.data.months[wkMk]||{expenses:[]};
+      const allExp=[...(mdataWk.expenses||[])];
+      if(wkMk!==mk()) allExp.push(...(mdata().expenses||[]));
+      const spent=allExp.filter(e=>e.category===cat.id&&e.date>=wds&&e.date<=wde).reduce((s,e)=>s+e.amount,0);
+
+      const remaining=effectiveBudget-spent;
+
+      if(wn===viewWn){
+        // Show this week's detail
+        const isPast=wn<curWn; const isCurrent=wn===curWn;
+        const pct=Math.min(100,effectiveBudget>0?(spent/effectiveBudget)*100:0);
+        const over=remaining<0;
+
+        if(carry!==0){
+          const carryEl=document.createElement('div'); carryEl.style.cssText='font-size:.72rem;font-weight:700;color:'+(carry>0?'#2A7050':'#A03030')+';margin-bottom:.4rem';
+          carryEl.textContent=(carry>0?'📈 Sobrante de sem. anterior: +':'📉 Déficit de sem. anterior: –')+fmt(Math.abs(carry));
+          catCard.appendChild(carryEl);
+        }
+
+        const budgetEl=document.createElement('div'); budgetEl.style.cssText="font-family:'Lora',serif;font-size:1.4rem;font-weight:700;color:"+(over?'#A03030':'#2A5040');
+        budgetEl.textContent=(over?'–':'')+fmt(Math.abs(remaining));
+        catCard.appendChild(budgetEl);
+
+        const detEl=document.createElement('div'); detEl.style.cssText='font-size:.73rem;font-weight:700;color:var(--muted);margin-bottom:.5rem';
+        if(isPast) detEl.textContent='Gastado: '+fmt(spent)+' · Presupuesto: '+fmt(effectiveBudget);
+        else if(isCurrent) detEl.textContent=fmt(spent)+' gastado de '+fmt(effectiveBudget)+' presupuestado';
+        else detEl.textContent='Presupuesto disponible: '+fmt(effectiveBudget);
+        catCard.appendChild(detEl);
+
+        const track=document.createElement('div'); track.style.cssText='height:5px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden';
+        const fill=document.createElement('div'); fill.style.cssText='height:100%;border-radius:3px;background:'+(over?'#E05050':cat.color)+';width:'+pct+'%';
+        track.appendChild(fill); catCard.appendChild(track);
+      }
+
+      carry=remaining; // carry-over to next week
+    }
+
+    root.appendChild(catCard);
+  });
+
+  // Total for this week
+  let totalBudgetView=0, carryTot=0;
+  weeklyCats.forEach(cat=>{
+    let carry2=0;
+    for(let wn=1;wn<=viewWn;wn++){
+      const subs=cat.subitems||[];
+      let sub=subs.find(si=>si.name.trim().toLowerCase()==='semana '+wn);
+      if(!sub&&subs.length>=wn) sub=subs[wn-1];
+      const base=sub?(sub.budget||0):(cat.budget||0);
+      const eff=base+carry2;
+      const todayNow=new Date();
+      const refDate=new Date(todayNow); refDate.setDate(todayNow.getDate()+(wn-curWn)*7);
+      const weekStart=getWeekStartDate(refDate,startDay);
+      const wds=weekStart.toISOString().split('T')[0];
+      const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+      const wde=weekEnd.toISOString().split('T')[0];
+      const wkMk=weekStart.getFullYear()+'-'+String(weekStart.getMonth()+1).padStart(2,'0');
+      const mdataWk=S.data.months[wkMk]||{expenses:[]};
+      const allExp=[...(mdataWk.expenses||[])];
+      if(wkMk!==mk()) allExp.push(...(mdata().expenses||[]));
+      const spent=allExp.filter(e=>e.category===cat.id&&e.date>=wds&&e.date<=wde).reduce((s,e)=>s+e.amount,0);
+      if(wn===viewWn) totalBudgetView+=eff;
+      carry2=eff-spent;
+    }
+  });
+
+  const totalCard=document.createElement('div');
+  totalCard.style.cssText='background:linear-gradient(135deg,#F5EEFF,#E8F0FF);border-radius:14px;padding:1rem;display:flex;justify-content:space-between;align-items:center;margin-top:.3rem';
+  const tl=document.createElement('div'); tl.style.cssText='font-size:.75rem;font-weight:800;color:#5A4A6A;text-transform:uppercase;letter-spacing:.5px'; tl.textContent='Total semana '+viewWn;
+  const tv=document.createElement('div'); tv.style.cssText="font-family:'Lora',serif;font-size:1.4rem;font-weight:700;color:#5A4A6A"; tv.textContent=fmt(totalBudgetView);
+  totalCard.appendChild(tl); totalCard.appendChild(tv);
+  root.appendChild(totalCard);
+}
 
 // ═══════════════════════════════════════════════
 // SETTINGS VIEW
