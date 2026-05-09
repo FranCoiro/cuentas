@@ -400,13 +400,14 @@ function catWeekExpenses(catId) {
 // PERSISTENCE
 // ═══════════════════════════════════════════════
 function saveLocal() {
-  S.data._savedAt = Date.now();
   localStorage.setItem('mf_data', JSON.stringify(S.data));
 }
 
 async function saveSB() {
   if (!SB_URL || !SB_KEY) return;
   try {
+    // Small delay to avoid race conditions
+    await new Promise(r => setTimeout(r, 100));
     const r = await fetch(SB_URL + '/rest/v1/mf_finanzas', {
       method: 'POST',
       headers: {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},
@@ -430,19 +431,8 @@ async function loadData() {
       if (r.ok) {
         const rows = await r.json();
         if (rows && rows[0] && rows[0].data) {
-          const remote = rows[0].data;
-          const localStr = localStorage.getItem('mf_data');
-          const local = localStr ? JSON.parse(localStr) : null;
-          const remoteSavedAt = remote._savedAt || 0;
-          const localSavedAt = local ? (local._savedAt || 0) : 0;
-          if (localSavedAt > remoteSavedAt) {
-            // Local is newer — keep it and push to Supabase
-            S.data = local;
-            saveSB();
-          } else {
-            S.data = remote;
-            saveLocal();
-          }
+          S.data = rows[0].data;
+          saveLocal();
           SB_STATUS = 'ok';
           return;
         }
