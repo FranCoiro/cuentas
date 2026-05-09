@@ -631,7 +631,9 @@ function rHome(c) {
   });
 
   const bal       = inc - exp - paidFixed - fondosMes;
-  const disponible = bal - pendFixed - projMes - resvTot - siPagados;
+  const saldoReal = (mdata().saldoReal !== null && mdata().saldoReal !== undefined) ? Number(mdata().saldoReal) : null;
+  const baseDisp  = saldoReal !== null ? saldoReal : bal;
+  const disponible = baseDisp - pendFixed - projMes - resvTot - siPagados;
   const totalFixed = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
 
 
