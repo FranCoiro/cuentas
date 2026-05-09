@@ -619,21 +619,14 @@ function rHome(c) {
 
   // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
   // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
-  // Sub-ítems pendientes:
-  // - Mensuales propios (no semanales): SÍ se descuentan
-  // - Miguel semanales: SÍ se descuentan (plata a transferir)
-  // - Semanales propios: NO (se manejan semana a semana)
+  // Sub-ítems pendientes: TODO lo no pagado, sin excepciones
   const paidSubs = mdata().paidSubs || {};
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
-    const isMiguel = cat.name.toLowerCase().includes('miguel');
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
       const key = cat.id+'__'+si.id;
-      if(paidSubs[key]) return; // ya pagado
-      if(isMiguel) { siPagados += si.budget; return; } // Miguel siempre cuenta
-      if(cat.freq==='semanal') return; // semanales propios no cuentan
-      siPagados += si.budget; // mensuales sí cuentan
+      if(!paidSubs[key]) siPagados += si.budget;
     });
   });
 
