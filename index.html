@@ -682,6 +682,25 @@ function rHome(c) {
 
   const hero = div({cn:'hero',style:{background:heroGrad}});
   // Disponible real = número principal
+  // Saldo real input
+  const saldoRow = document.createElement('div');
+  saldoRow.style.cssText='display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
+  const saldoLbl = document.createElement('span');
+  saldoLbl.style.cssText='font-size:.72rem;font-weight:800;color:#7A6A90;white-space:nowrap';
+  saldoLbl.textContent='💳 Saldo en cuenta:';
+  const saldoInp = document.createElement('input');
+  saldoInp.type='number';
+  saldoInp.placeholder='ingresá tu saldo actual';
+  saldoInp.value = mdata().saldoReal !== null && mdata().saldoReal !== undefined ? mdata().saldoReal : '';
+  saldoInp.style.cssText="border:2px solid rgba(255,255,255,.6);border-radius:8px;padding:.3rem .6rem;font-family:'Lora',serif;font-size:.88rem;font-weight:700;background:rgba(255,255,255,.5);width:160px;color:var(--text)";
+  saldoInp.addEventListener('change',()=>{
+    const v = saldoInp.value==='' ? null : Number(saldoInp.value);
+    mdata().saldoReal = v;
+    save(); render();
+  });
+  saldoRow.appendChild(saldoLbl); saldoRow.appendChild(saldoInp);
+  hero.appendChild(saldoRow);
+
   const dispEye = document.createElement('div'); dispEye.className='hero-eye';
   dispEye.textContent = disponible>=0 ? '✓ disponible real este mes' : '⚠️ déficit proyectado';
   hero.appendChild(dispEye);
@@ -739,6 +758,7 @@ function rHome(c) {
 
   // Reservas inline
   if (!mdata().reservas) mdata().reservas=[];
+  if (mdata().saldoReal === undefined) mdata().saldoReal = null;
   if((mdata().reservas||[]).length || true){
     const resWrap = document.createElement('div');
     resWrap.style.cssText='margin-top:.6rem';
