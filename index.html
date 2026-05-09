@@ -619,10 +619,14 @@ function rHome(c) {
 
   // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
   // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
-  // Sub-ítems pendientes: todos los no pagados del mes
+  // Sub-ítems pendientes: SOLO mensuales no pagados
+  // Semanales excluidos (ya cubiertos por gastos reales)
+  // Miguel excluido (cuenta aparte)
   const paidSubs = mdata().paidSubs || {};
   let siPagados = 0;
   (S.data.cats||[]).forEach(cat=>{
+    if(cat.name.toLowerCase().includes('miguel')) return;
+    if(cat.freq==='semanal') return;
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
       const key = cat.id+'__'+si.id;
