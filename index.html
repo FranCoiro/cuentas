@@ -693,12 +693,17 @@ function rHome(c) {
   saldoInp.placeholder='ingresá tu saldo actual';
   saldoInp.value = mdata().saldoReal !== null && mdata().saldoReal !== undefined ? mdata().saldoReal : '';
   saldoInp.style.cssText="border:2px solid rgba(255,255,255,.6);border-radius:8px;padding:.3rem .6rem;font-family:'Lora',serif;font-size:.88rem;font-weight:700;background:rgba(255,255,255,.5);width:160px;color:var(--text)";
-  saldoInp.addEventListener('change',()=>{
+  const saldoBtn = document.createElement('button');
+  saldoBtn.textContent='✓';
+  saldoBtn.style.cssText='background:#2A7050;color:#FFF;border:none;border-radius:8px;padding:.3rem .7rem;font-weight:800;cursor:pointer;font-size:.9rem;flex-shrink:0';
+  const doSave = ()=>{
     const v = saldoInp.value==='' ? null : Number(saldoInp.value);
     mdata().saldoReal = v;
     save(); render();
-  });
-  saldoRow.appendChild(saldoLbl); saldoRow.appendChild(saldoInp);
+  };
+  saldoBtn.addEventListener('click', doSave);
+  saldoInp.addEventListener('keydown', e=>{ if(e.key==='Enter') doSave(); });
+  saldoRow.appendChild(saldoLbl); saldoRow.appendChild(saldoInp); saldoRow.appendChild(saldoBtn);
   hero.appendChild(saldoRow);
 
   const dispEye = document.createElement('div'); dispEye.className='hero-eye';
