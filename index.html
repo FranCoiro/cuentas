@@ -619,16 +619,60 @@ function rHome(c) {
 
   // Sub-ítems pendientes = todos los NO tachados se descuentan del disponible
   // Lógica simple: si está tachado (paid/paidWeek set this week) = no cuenta
-  // Sub-ítems pendientes: TODO lo no pagado, sin excepciones
+  // Sub-ítems pendientes:
+  // - Mensuales no pagados: SÍ
+  // - Semanas FUTURAS no pagadas: SÍ  
+  // - Semana EN CURSO: se calcula aparte (presupuesto - gastado real)
+  // - Semanas PASADAS: NO
   const paidSubs = mdata().paidSubs || {};
   let siPagados = 0;
+  let semanaEnCursoTotal = 0; // restante de la semana actual
+
   (S.data.cats||[]).forEach(cat=>{
+    const curWn2 = getCurrentWeekNum(cat.weekStart||'Lunes');
+    const startDay2 = cat.weekStart||'Lunes';
+    // Date range for current week
+    const todaySI = new Date();
+    const wsCur = getWeekStartDate(todaySI, startDay2);
+    const weCur = new Date(wsCur); weCur.setDate(wsCur.getDate()+6);
+    const wdsCur = wsCur.toISOString().split('T')[0];
+    const wdeCur = weCur.toISOString().split('T')[0];
+    const wkMkCur = wsCur.getFullYear()+'-'+String(wsCur.getMonth()+1).padStart(2,'0');
+    const mdataCur = S.data.months[wkMkCur]||{expenses:[]};
+    const allExpCur = [...(mdataCur.expenses||[])];
+    if(wkMkCur!==mk()) allExpCur.push(...(mdata().expenses||[]));
+
     (cat.subitems||[]).forEach(si=>{
       if((si.budget||0)<=0) return;
       const key = cat.id+'__'+si.id;
-      if(!paidSubs[key]) siPagados += si.budget;
+      if(paidSubs[key]) return; // ya pagado
+
+      const n = si.name.trim().toLowerCase();
+      const isWeeklySub = n.startsWith('semana ');
+      if(!isWeeklySub){
+        // Mensual: siempre cuenta
+        siPagados += si.budget;
+        return;
+      }
+
+      const siWn = parseInt(n.replace('semana ',''))||0;
+      if(siWn < curWn2) return; // semana pasada, no cuenta
+      
+      if(siWn === curWn2){
+        // Semana en curso: solo el restante
+        const spentCur = allExpCur
+          .filter(e=>e.category===cat.id&&e.date>=wdsCur&&e.date<=wdeCur)
+          .reduce((s,e)=>s+e.amount,0);
+        // Also count paidSubs for this week
+        const remaining = Math.max(0, si.budget - spentCur);
+        semanaEnCursoTotal += remaining;
+      } else {
+        // Semana futura: cuenta completa
+        siPagados += si.budget;
+      }
     });
   });
+  siPagados += semanaEnCursoTotal;
 
   const bal       = inc - exp - paidFixed - fondosMes;
   const saldoReal = (mdata().saldoReal != null) ? Number(mdata().saldoReal) : null;
@@ -753,7 +797,9 @@ function rHome(c) {
   };
   if(pendFixed>0)      dispDetail.appendChild(mkDRow('📌 Fijos por pagar',pendFixed,true));
   if(projMes>0)        dispDetail.appendChild(mkDRow('🔮 Proyectados este mes',projMes,true));
-  if(siPagados>0)   dispDetail.appendChild(mkDRow('📋 Compromisos pendientes',siPagados,true));
+  if(semanaEnCursoTotal>0) dispDetail.appendChild(mkDRow('🗓️ Semana en curso (restante)',semanaEnCursoTotal,true));
+  const siSinCurso = siPagados - semanaEnCursoTotal;
+  if(siSinCurso>0)  dispDetail.appendChild(mkDRow('📋 Compromisos y sem. futuras',siSinCurso,true));
   if(resvTot>0)    dispDetail.appendChild(mkDRow('🔖 Reservas puntuales',resvTot,true));
   dispStrip.addEventListener('click',()=>{
     dispDetail.style.display = dispDetail.style.display==='none'?'block':'none';
@@ -1361,8 +1407,47 @@ function rFixed(c) {
     });
     root.appendChild(s1sum);
 
-    // List
-    const siSorted=[...subItemsList].sort((a,b)=>(a.paid===b.paid?0:a.paid?1:-1));
+    // Separate current week items from the rest
+    const curWnFixed = getCurrentWeekNum('Lunes'); // approximate
+    const todayFixed = new Date();
+    const semActualItems = [];
+    const otherItems = [];
+    subItemsList.forEach(si=>{
+      const n = si.name.toLowerCase();
+      // Extract week number from name like "Cat → Semana 2"
+      const wMatch = n.match(/semana\s*(\d)/);
+      const siWnF = wMatch ? parseInt(wMatch[1]) : 0;
+      // Find the cat to get weekStart
+      const catF = S.data.cats.find(c=>{
+        return (c.subitems||[]).some(s=>c.id+'__'+s.id===si.id);
+      });
+      const startDayF = catF ? (catF.weekStart||'Lunes') : 'Lunes';
+      const curWnF = getCurrentWeekNum(startDayF);
+      if(siWnF === curWnF && !si.paid){
+        semActualItems.push({...si, wn:siWnF});
+      } else {
+        otherItems.push(si);
+      }
+    });
+
+    // Show semana en curso section if any
+    if(semActualItems.length){
+      const scHdr=document.createElement('div'); scHdr.style.cssText='font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#2A7050;margin-bottom:.5rem';
+      scHdr.textContent='🗓️ Semana en curso — restante';
+      root.appendChild(scHdr);
+      semActualItems.forEach(si=>{
+        const card=document.createElement('div'); card.style.cssText='background:#E8F8EE;border:2px solid #77DD7744;border-radius:12px;padding:.7rem 1rem;margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem';
+        const nm=document.createElement('div'); nm.style.cssText='flex:1;font-size:.82rem;font-weight:700;color:#2A5040'; nm.textContent=si.icon+' '+si.name;
+        const amt=document.createElement('div'); amt.style.cssText="font-family:'Lora',serif;font-weight:700;color:#2A7050;font-size:.95rem"; amt.textContent=fmt(si.amount);
+        card.appendChild(nm); card.appendChild(amt);
+        root.appendChild(card);
+      });
+      const div2=document.createElement('div'); div2.style.cssText='border-top:2px dashed var(--border);margin:.8rem 0';
+      root.appendChild(div2);
+    }
+
+    // Show rest of sub-items
+    const siSorted=[...otherItems].sort((a,b)=>(a.paid===b.paid?0:a.paid?1:-1));
     siSorted.forEach(si=>{
       const card=document.createElement('div');
       card.className='fixed-card'+(si.paid?' paid':'');
