@@ -631,7 +631,8 @@ function rHome(c) {
   });
 
   const bal       = inc - exp - paidFixed - fondosMes;
-  const disponible = bal - pendFixed - projMes - resvTot - siPagados;
+  const saldoReal = (mdata().saldoReal != null) ? Number(mdata().saldoReal) : null;
+  const disponible = (saldoReal !== null ? saldoReal : bal) - pendFixed - projMes - resvTot - siPagados;
   const totalFixed = (S.data.fixed||[]).reduce((s,f)=>s+f.amount,0);
 
 
@@ -682,8 +683,31 @@ function rHome(c) {
 
   const hero = div({cn:'hero',style:{background:heroGrad}});
   // Disponible real = número principal
+  // Saldo en cuenta
+  const saldoWrap = document.createElement('div');
+  saldoWrap.style.cssText='display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem;flex-wrap:wrap';
+  const saldoLbl = document.createElement('span');
+  saldoLbl.style.cssText='font-size:.72rem;font-weight:800;color:#7A6A90;white-space:nowrap';
+  saldoLbl.textContent='💳 Plata en el banco:';
+  const saldoInp = document.createElement('input');
+  saldoInp.type='number';
+  saldoInp.placeholder='ej: 1230610';
+  saldoInp.value = (mdata().saldoReal != null) ? mdata().saldoReal : '';
+  saldoInp.style.cssText="border:2px solid rgba(255,255,255,.5);border-radius:8px;padding:.3rem .6rem;font-family:'Lora',serif;font-size:.88rem;font-weight:700;background:rgba(255,255,255,.5);width:140px;color:var(--text)";
+  const saldoBtn = document.createElement('button');
+  saldoBtn.textContent='✓';
+  saldoBtn.style.cssText='background:#2A7050;color:#FFF;border:none;border-radius:8px;padding:.3rem .6rem;font-weight:800;cursor:pointer;font-size:.85rem';
+  const actualizarSaldo = ()=>{
+    mdata().saldoReal = saldoInp.value==='' ? null : Number(saldoInp.value);
+    save(); render();
+  };
+  saldoBtn.addEventListener('click', actualizarSaldo);
+  saldoInp.addEventListener('keydown', e=>{ if(e.key==='Enter') actualizarSaldo(); });
+  saldoWrap.appendChild(saldoLbl); saldoWrap.appendChild(saldoInp); saldoWrap.appendChild(saldoBtn);
+  hero.appendChild(saldoWrap);
+
   const dispEye = document.createElement('div'); dispEye.className='hero-eye';
-  dispEye.textContent = disponible>=0 ? '✓ disponible real este mes' : '⚠️ déficit proyectado';
+  dispEye.textContent = disponible>=0 ? '✓ dinero libre este mes' : '⚠️ te falta plata';
   hero.appendChild(dispEye);
   const dispBig = document.createElement('div');
   dispBig.className='hero-bal '+(disponible>=0?'pos':'neg');
